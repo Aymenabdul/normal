@@ -1,0 +1,20 @@
+1
+00:00:00,000 --> 00:00:02,000
+Hi, this is Ayman and this is my room
+
+2
+00:00:02,001 --> 00:00:04,001
+And here where I am living in Chennai
+
+3
+00:00:04,002 --> 00:00:06,002
+Today the weather is really hard
+
+4
+00:00:06,003 --> 00:00:08,003
+They gave us a red alert for Chennai and some other districts
+
+5
+00:00:08,004 --> 00:00:10,004
+So be safe guys.
+
