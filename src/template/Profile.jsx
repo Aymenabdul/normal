@@ -135,30 +135,6 @@ const Profile = () => {
     cityName.toLowerCase().includes(searchText.toLowerCase()),
   );
 
-  const fetchProfilePic = async userId => {
-    try {
-      const response = await axios.get(
-        `${env.baseURL}/users/user/${userId}/profilepic`,
-        {
-          responseType: 'arraybuffer',
-        },
-      );
-      if (response.data) {
-        const base64Image = `data:image/jpeg;base64,${Buffer.from(
-          response.data,
-          'binary',
-        ).toString('base64')}`;
-        setProfileImage(base64Image);
-      } else {
-        setProfileImage(null);
-      }
-    } catch (error) {
-      console.error('Error fetching profile pic:', error);
-      setProfileImage(null);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleFilter = async () => {
     const filterData = {
@@ -187,14 +163,14 @@ const Profile = () => {
         }));
 
         setFilteredVideos(videosWithUri);
-        navigation.navigate('HomeScreen', {
+        navigation.navigate('Filtered', {
           filteredVideos: videosWithUri,
           isFiltered: true,
         });
       } else {
-        // Show a popup and navigate back to HomeScreen
+        // Show a popup and navigate back to Filtered
         alert('No videos found for the selected filter.');
-        navigation.navigate('HomeScreen', {
+        navigation.navigate('Filtered', {
           filteredVideos: [],
           isFiltered: true,
         });

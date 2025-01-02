@@ -11,6 +11,7 @@ import {
   Alert,
   Image,
   Linking,
+  BackHandler,
 } from 'react-native';
 import axios from 'axios';
 import {Buffer} from 'buffer';
@@ -77,6 +78,35 @@ const HomeScreen = () => {
     };
     Asyncstorage();
   }, []);
+
+  useEffect(() => {
+    const backAction = () => {
+      // Show a confirmation alert before navigating back
+      Alert.alert('Hold on!', 'Are you sure you want to go back?', [
+        {
+          text: 'Cancel',
+          onPress: () => null, // Do nothing
+          style: 'cancel',
+        },
+        {
+          text: 'YES',
+          onPress: () => navigation.goBack(), // Navigate back
+        },
+      ]);
+      return true; // Prevent the default back action
+    };
+
+    // Add event listener for back press
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+
+    // Cleanup the event listener on component unmount
+    return () => {
+      backHandler.remove();
+    };
+  }, [navigation]);
 
   const requestCallPermission = async () => {
     if (Platform.OS === 'android') {
@@ -241,12 +271,47 @@ const HomeScreen = () => {
   };
 
   useEffect(() => {
-    if (!filteredVideos) {
-      fetchVideos();
-      fetchProfilePic(userId); // Fetch all videos if no filteredVideos are provided
-    }
-    fetchProfilePic(userId);
-  }, [filteredVideos, userId]);
+    const fetchVideos = async () => {
+      try {
+        // Construct the URL with the userId parameter
+        const url = `${env.baseURL}/api/videos/liked?userId=${userId}`;
+
+        // Make the fetch request with the constructed URL
+        const response = await fetch(url);
+        if (!response.ok)
+          throw new Error(`Failed to fetch videos: ${response.statusText}`);
+
+        // Parse the response
+        const videoData = await response.json();
+        console.log('Video Data:', videoData); // Log to check the response structure
+
+        // Check if the video data is an array and contains videos
+        if (Array.isArray(videoData) && videoData.length > 0) {
+          const videoURIs = videoData.map(video => ({
+            id: video.id,
+            title: video.title || 'Untitled Video',
+            uri: `${env.baseURL}/api/videos/user/${video.userId}`,
+          }));
+          console.log('Generated URIs:', videoURIs); // Log generated URLs
+
+          // Set the video URLs and update the state
+          setVideoUrl(videoURIs);
+          setHasVideo(true);
+        } else {
+          console.warn('No videos available');
+          setVideoUrl([]);
+          setHasVideo(false);
+        }
+      } catch (error) {
+        console.error('Error fetching videos:', error);
+        setHasVideo(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchVideos(userId);
+    fetchProfilePic(userId); // Fetch all videos if no filteredVideos are provided
+  }, [userId]);
 
   const fetchLikeCount = videoId => {
     console.log('Fetching like count for videoId:', videoId); // Check if the videoId is correct
@@ -271,11 +336,9 @@ const HomeScreen = () => {
     try {
       if (newLikedState) {
         // If liked, send like request
-        await axios.post(
-          `${env.baseURL}/api/videos/${videoId}/like`,
-          null,
-          {params: {userId}},
-        );
+        await axios.post(`${env.baseURL}/api/videos/${videoId}/like`, null, {
+          params: {userId},
+        });
         setLikeCount(prevCount => prevCount + 1); // Increment like count
         // Trigger notification for video owner (after the like request is successful)
         await saveLikeNotification(videoId, firstName);
@@ -310,11 +373,9 @@ const HomeScreen = () => {
     try {
       if (!newLikedState) {
         // If disliked, send dislike request
-        await axios.post(
-          `${env.baseURL}/api/videos/${videoId}/dislike`,
-          null,
-          {params: {userId}},
-        );
+        await axios.post(`${env.baseURL}/api/videos/${videoId}/dislike`, null, {
+          params: {userId},
+        });
         setLikeCount(prevCount => prevCount - 1); // Decrement like count (dislike removes like)
       }
     } catch (error) {
@@ -380,45 +441,6 @@ const HomeScreen = () => {
     } catch (error) {
       console.error('Error fetching profile pic:', error);
       setProfileImage(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchVideos = async () => {
-    try {
-      // Construct the URL with the userId parameter
-      const url = `${env.baseURL}/api/videos/liked?userId=${userId}`;
-
-      // Make the fetch request with the constructed URL
-      const response = await fetch(url);
-      if (!response.ok)
-        throw new Error(`Failed to fetch videos: ${response.statusText}`);
-
-      // Parse the response
-      const videoData = await response.json();
-      console.log('Video Data:', videoData); // Log to check the response structure
-
-      // Check if the video data is an array and contains videos
-      if (Array.isArray(videoData) && videoData.length > 0) {
-        const videoURIs = videoData.map(video => ({
-          id: video.id,
-          title: video.title || 'Untitled Video',
-          uri: `${env.baseURL}/api/videos/user/${video.userId}`,
-        }));
-        console.log('Generated URIs:', videoURIs); // Log generated URLs
-
-        // Set the video URLs and update the state
-        setVideoUrl(videoURIs);
-        setHasVideo(true);
-      } else {
-        console.warn('No videos available');
-        setVideoUrl([]);
-        setHasVideo(false);
-      }
-    } catch (error) {
-      console.error('Error fetching videos:', error);
-      setHasVideo(false);
     } finally {
       setLoading(false);
     }
@@ -517,7 +539,9 @@ const HomeScreen = () => {
                       console.error('Video playback error:', error)
                     }
                   />
-                  <TouchableOpacity onPress={''} style={styles.trending1}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('Trending')}
+                    style={styles.trending1}>
                     <Text style={{color: '#ffffff', fontWeight: '600'}}>
                       #Trending
                     </Text>

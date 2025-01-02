@@ -11,6 +11,12 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private VerificationTokenService tokenService;
+
     public User saveUser(User user) {
         return userRepository.save(user); // Save user details to the database
     }
@@ -55,14 +61,25 @@ public class UserService {
             if (updatedUser.getLanguagesKnown() != null) existingUser.setLanguagesKnown(updatedUser.getLanguagesKnown());
             if (updatedUser.getCity() != null) existingUser.setCity(updatedUser.getCity());
             if (updatedUser.getEstablishedYear() != null) existingUser.setEstablishedYear(updatedUser.getEstablishedYear());
-            if (updatedUser.getLanguages() != null) existingUser.setLanguages(updatedUser.getLanguages());
-
+            existingUser.setEnabled(updatedUser.isEnabled());
             return userRepository.save(existingUser);
         }).orElseThrow(() -> new RuntimeException("User not found with ID: " + id));
     }
 
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    public void registerUser(User user) {
+        // Save the user
+        user.setEnabled(false); // Disable the user account until verification
+        User savedUser = userRepository.save(user);
+
+        // Generate verification token
+        String token = tokenService.createTemporaryToken(savedUser);
+
+        // Send email
+        emailService.sendVerificationEmail(user.getEmail(), token);
     }
     
 }

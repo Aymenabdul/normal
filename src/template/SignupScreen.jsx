@@ -237,46 +237,51 @@ const SignupScreen = () => {
       currentEmployer,
       languages: languagesKnown,
     };
-
+    
     setLoading(true);
-
+    
     try {
       const response = await axios.post(
         `${env.baseURL}/users`,
         userData,
         {
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           timeout: 10000,
-        },
+        }
       );
       console.log('User created:', response.data);
-      Alert.alert('Success', 'Signup successful!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            navigation.navigate('LoginScreen');
-            setFirstName('');
-            setLastName('');
-            setEmail('');
-            setPhoneNumber('');
-            setJobOption('');
-            setPassword('');
-            setConfirmPassword('');
-            setProfilePic(null);
-            setCurrentRole('');
-            setKeySkills('');
-            setExperience('');
-            setCity('');
-            setIndustry('');
-            setCurrentEmployer('');
-            setLanguagesKnown('');
+      Alert.alert(
+        'Success',
+        'Registration successful! Please check your email for verification.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigate to LoginScreen and reset form fields
+              navigation.navigate('LoginScreen');
+              setFirstName('');
+              setLastName('');
+              setEmail('');
+              setPhoneNumber('');
+              setJobOption('');
+              setPassword('');
+              setConfirmPassword('');
+              setProfilePic(null);
+              setCurrentRole('');
+              setKeySkills('');
+              setExperience('');
+              setCity('');
+              setIndustry('');
+              setCurrentEmployer('');
+              setLanguagesKnown('');
+            },
           },
-        },
-      ]);
+        ]
+      );
     } catch (error) {
       console.error(
         'Signup failed:',
-        error.response ? error.response.data : error.message,
+        error.response ? error.response.data : error.message
       );
     } finally {
       setLoading(false);

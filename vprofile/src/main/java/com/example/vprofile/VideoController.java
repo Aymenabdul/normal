@@ -2,6 +2,7 @@
 package com.example.vprofile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
@@ -38,6 +40,9 @@ public class VideoController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Autowired
     public VideoController(FFmpegService ffmpegService, VideoService videoService) {
@@ -224,7 +229,7 @@ public ResponseEntity<Resource> generateSRTForUser(@PathVariable Long userId) {
     }
 }
 @PostMapping("/filter")
-public ResponseEntity<List<Video>> filterVideos(@RequestBody User user) {
+public ResponseEntity<List<Map<String, Object>>> filterVideos(@RequestBody User user) {
     // Log the incoming request data
     System.out.println("Received filter request with the following data:");
     System.out.println("Key Skills: " + user.getKeySkills());
@@ -234,15 +239,50 @@ public ResponseEntity<List<Video>> filterVideos(@RequestBody User user) {
 
     // Call the service to filter videos
     List<Video> videos = videoService.filterVideos(
-        user.getKeySkills(), // This should now work as a list
+        user.getKeySkills(),
         user.getExperience(),
         user.getIndustry(),
         user.getCity()
     );
 
-    // Return the filtered videos in the response
-    return ResponseEntity.ok(videos);
+    // Check if any videos are returned
+    if (videos.isEmpty()) {
+        System.out.println("No videos found for the given filter criteria");
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    // Log the number of videos fetched based on the filter
+    System.out.println("Number of videos fetched: " + videos.size());
+
+    // Prepare the response list
+    List<Map<String, Object>> videoResponses = new ArrayList<>();
+    System.out.println("Preparing response for each video entity...");
+
+    // Iterate over the filtered video list
+    for (Video video : videos) {
+        // Log each video entity being processed
+        System.out.println("Processing video with ID: " + video.getId());
+
+        // Create a map to hold video data
+        Map<String, Object> videoData = new HashMap<>();
+        videoData.put("id", video.getId());  // Use getVideoId to access the ID
+        videoData.put("filePath", video.getFilePath());
+        videoData.put("userId", video.getUserId());
+
+        // Add the video data map to the response list
+        videoResponses.add(videoData);
+    }
+
+    // Log the number of videos prepared for the response
+    System.out.println("Number of videos to return in response: " + videoResponses.size());
+
+    // Log completion of processing
+    System.out.println("Successfully prepared video responses. Returning the response...");
+
+    // Return the response with the list of video data
+    return ResponseEntity.ok(videoResponses);
 }
+
 
 @GetMapping("/user/{videoId}/details")
     public ResponseEntity<Map<String, String>> getUserDetailsByVideoId(@PathVariable Long videoId) {
@@ -260,16 +300,89 @@ public ResponseEntity<List<Video>> filterVideos(@RequestBody User user) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
     @PostMapping("/{videoId}/like")
-    public ResponseEntity<?> likeVideo(@PathVariable Long videoId, @RequestParam Long userId) {
-        videoService.addLike(userId, videoId);
-        return ResponseEntity.ok().body("Liked the video");
+    public ResponseEntity<String> likeVideo(
+        @PathVariable Long videoId,
+        @RequestParam Long userId,
+        @RequestParam String firstName
+    ) {
+        // Fetch the video and user
+        Video video = videoRepository.findById(videoId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Video not found"));
+    
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    
+        // Check if the user has already liked the video
+        Optional<Like> existingLike = likeRepository.findByUserIdAndVideoId(userId, videoId);
+    
+        if (existingLike.isPresent()) {
+            // If the user already liked the video, toggle the like status
+            Like like = existingLike.get(); // Unwrap the Optional to get the Like object
+            like.setIsLike(!like.getIsLike()); // Toggle the like status
+            like.setCreatedAt(LocalDateTime.now()); // Update the timestamp if necessary
+            likeRepository.save(like);  // Save the updated like
+        } else {
+            // If the user hasn't liked the video yet, create a new like record
+            Like newLike = new Like();
+            newLike.setUserId(userId);
+            newLike.setVideoId(videoId);
+            newLike.setIsLike(true);  // Set to true since user is liking the video
+            newLike.setCreatedAt(LocalDateTime.now());  // Set current timestamp
+            likeRepository.save(newLike);  // Save the new like record
+        }
+    
+        // Save the notification for the video owner
+        notificationService.saveNotification(video, firstName);
+    
+        return ResponseEntity.ok("Video liked and notification sent.");
     }
+    
+
 
     @PostMapping("/{videoId}/dislike")
-public ResponseEntity<String> dislikeVideo(@PathVariable Long videoId, @RequestParam Long userId) {
-    videoService.addDislike(userId, videoId);  // Calls the addDislike method in VideoService
-    return ResponseEntity.ok("Disliked the video");
-}
+    public ResponseEntity<String> dislikeVideo(
+        @PathVariable Long videoId,
+        @RequestParam Long userId,
+        @RequestParam String firstName
+    ) {
+        // Fetch the video and user
+        Video video = videoRepository.findById(videoId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Video not found"));
+    
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    
+        // Check if the user has already disliked the video
+        Optional<Like> existingLike = likeRepository.findByUserIdAndVideoId(userId, videoId);
+    
+        if (existingLike.isPresent()) {
+            Like like = existingLike.get(); // Unwrap the Optional
+    
+            if (!like.getIsLike()) {
+                // If the user already disliked the video, remove the dislike
+                likeRepository.delete(like);
+            } else {
+                // If the user liked the video, replace the like with a dislike
+                like.setIsLike(false); // Set to false to indicate a dislike
+                like.setCreatedAt(LocalDateTime.now()); // Update the timestamp
+                likeRepository.save(like); // Save the updated record
+            }
+        } else {
+            // If the user hasn't interacted with the video yet, create a new dislike record
+            Like newDislike = new Like();
+            newDislike.setUserId(userId);
+            newDislike.setVideoId(videoId);
+            newDislike.setIsLike(false); // Set to false to indicate a dislike
+            newDislike.setCreatedAt(LocalDateTime.now()); // Set current timestamp
+            likeRepository.save(newDislike); // Save the new dislike record
+        }
+    
+        // Optionally, you can add logic to send a notification for the video owner
+        // notificationService.saveNotification(video, firstName);
+    
+        return ResponseEntity.ok("Video disliked successfully.");
+    }
+
 
     @GetMapping("/{videoId}/like-count")
     public ResponseEntity<Long> getLikeCount(@PathVariable Long videoId) {
@@ -388,5 +501,11 @@ public ResponseEntity<List<Map<String, Object>>> getLikedVideosByUserId(@Request
     // Return the response with the list of liked video data
     return ResponseEntity.ok(videoResponses);
 }
+
+@GetMapping("/trending")
+    public ResponseEntity<?> getTrendingVideos() {
+        List<Object[]> trendingVideos = videoService.getTrendingVideos();
+        return ResponseEntity.ok(trendingVideos);
+    }
 
 }

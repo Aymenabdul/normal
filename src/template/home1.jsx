@@ -19,6 +19,7 @@ import Delete from 'react-native-vector-icons/MaterialCommunityIcons';
 import Shares from 'react-native-vector-icons/Ionicons';
 import Share from 'react-native-share';
 import notifee from '@notifee/react-native';
+import {Filter} from 'bad-words';
 import env from './env';
 
 const Home1 = () => {
@@ -36,6 +37,45 @@ const Home1 = () => {
   const [subtitles, setSubtitles] = useState([]);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
   const [videoId, setVideoId] = useState();
+  const [transcription, setTranscription] = useState('');
+  const [isVideoVisible, setIsVideoVisible] = useState(true);
+
+  useEffect(() => {
+    const filter = new Filter(); // Initialize the bad-words filter
+    const fetchTranscription = async () => {
+      console.log('====================================');
+      console.log('Fetching transcription for userId:', userId);
+      console.log('====================================');
+      try {
+        const response = await axios.get(
+          `${env.baseURL}/api/videos/${userId}/transcription`,
+        );
+        if (response.data.transcription) {
+          const fetchedTranscription = response.data.transcription;
+          setTranscription(fetchedTranscription);
+
+          // Check for profanity in the transcription
+          const cleanText = filter.clean(fetchedTranscription);
+
+          // If profanity is detected (cleanText is different from original transcription), hide or blur the video
+          if (cleanText !== fetchedTranscription) {
+            console.log('Profanity detected! Hiding or blurring the video.');
+            setIsVideoVisible(false); // Hide the video if profanity is detected
+          } else {
+            console.log('No profanity detected.');
+            setIsVideoVisible(true); // Show the video if no profanity is detected
+          }
+        } else {
+          alert('No transcription available for this user.');
+        }
+      } catch (error) {
+        console.error('Error fetching transcription:', error.message);
+        alert('Failed to fetch transcription.');
+      }
+    };
+
+    fetchTranscription();
+  }, [userId]); // Dependency array to trigger the effect when userId changes
 
   // Function to convert time format to seconds
   const parseTimeToSeconds = timeStr => {
@@ -165,6 +205,9 @@ const Home1 = () => {
       if (!response.ok) {
         throw new Error('Failed to fetch video');
       }
+      console.log('====================================');
+      console.log(response);
+      console.log('====================================');
       const videoUril = `${env.baseURL}/api/videos/user/${userId}`;
       setVideoUri(videoUril);
       setHasVideo(true); // Set to true if video is available
@@ -237,37 +280,63 @@ const Home1 = () => {
 
   //Reactions full code................................................................................................................
 
-  const checkForNotifications = async () => {
-    try {
-      const notifications =
-        JSON.parse(await AsyncStorage.getItem('likeNotifications')) || [];
-      if (notifications.length > 0) {
-        // Display the latest notification
-        notifications.pop();
-        await notifee.displayNotification({
-          title: 'wezume',
-          body: `Your video has been liked by ${firstName}.`,
-          android: {
-            channelId: 'owner-channel',
-            smallIcon: 'ic_launcher',
-            importance: 4,
-          },
-        });
-        // Save back the remaining notifications
-        await AsyncStorage.setItem(
-          'likeNotifications',
-          JSON.stringify(notifications),
-        );
-      }
-    } catch (error) {
-      console.error('Error checking for notifications:', error);
-    }
+  const ensureNotificationChannel = async () => {
+    const channelId = 'owner-channel';
+    await notifee.createChannel({
+      id: channelId,
+      name: 'Owner Channel',
+      importance: 4,
+    });
+    return channelId;
   };
 
   useEffect(() => {
-    const intervalId = setInterval(checkForNotifications, 5000); // Check every 5 seconds
-    return () => clearInterval(intervalId); // Cleanup on unmount
-  });
+    const fetchNotifications = async userId => {
+      // Add userId as a parameter here
+      if (!userId) {
+        console.error('User ID is missing');
+        return;
+      }
+
+      console.log('notification userId ', userId);
+      try {
+        const response = await axios.get(`${env.baseURL}/api/notifications`, {
+          params: {userId}, // Make sure the userId is passed correctly
+        });
+
+        const notifications = response.data;
+
+        if (notifications.length > 0) {
+          // Display the latest notification
+          const latestNotification = notifications[0]; // Or process all if needed
+
+          await notifee.displayNotification({
+            title: 'Wezume',
+            body: `${latestNotification.likerName} liked your video.`,
+            android: {
+              channelId: await ensureNotificationChannel(),
+              smallIcon: 'ic_launcher', // Replace with your app's small icon
+            },
+          });
+
+          // Mark notifications as read (optional)
+          await axios.post(
+            `${env.baseURL}/api/notifications/mark-as-read`,
+            notifications.map(n => n.id),
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+    if (userId) {
+      fetchNotifications(userId); // Call it with the userId
+      const intervalId = setInterval(() => fetchNotifications(userId), 5000); // Pass userId on interval calls
+      return () => clearInterval(intervalId); // Cleanup on unmount
+    } else {
+      console.error('UserId is undefined or invalid.');
+    }
+  }, [userId]); // Trigger useEffect whenever userId changes
 
   useEffect(() => {
     const loadDataFromStorage = async () => {
@@ -279,26 +348,20 @@ const Home1 = () => {
         const apiVideoId = await AsyncStorage.getItem('videoId');
 
         // Convert userId and videoId from string to integer
-        const parsedUserId = apiUserId ? parseInt(apiUserId, 10) : null;
         const parsedVideoId = apiVideoId ? parseInt(apiVideoId, 10) : null;
 
         // Log the retrieved and parsed values
-        console.log(
-          'Retrieved userId:',
-          parsedUserId,
-          'Retrieved videoId:',
-          parsedVideoId,
-        );
+        console.log('Retrieved videoId:', parsedVideoId);
 
         // Set state with retrieved data
         setFirstName(apiFirstName);
         setIndustry(apiIndustry);
-        setUserId(parsedUserId); // Set parsed userId in state
+        setUserId(apiUserId); // Set parsed userId in state
         setVideoId(parsedVideoId); // Set parsed videoId in state
 
         // Call functions to fetch additional data (profile picture, video, etc.)
-        fetchProfilePic(parsedUserId);
-        fetchVideo(parsedUserId);
+        fetchProfilePic(apiUserId);
+        fetchVideo(apiUserId);
 
         // Log the videoId after setting it
         console.log('Retrieved videoId from AsyncStorage:', parsedVideoId);
@@ -325,7 +388,8 @@ const Home1 = () => {
         <View style={styles.centerContent}>
           {loading ? (
             <ActivityIndicator size="large" color="#000" />
-          ) : videoUri ? (
+          ) : videoUri && isVideoVisible ? (
+            // Show the video if it's visible
             <TouchableOpacity
               onPress={() => setModalVisible(true)}
               style={{marginTop: '5%'}}>
@@ -338,11 +402,19 @@ const Home1 = () => {
               />
               <Text style={styles.subtitle}>{currentSubtitle}</Text>
             </TouchableOpacity>
-          ) : (
+          ) : !hasVideo ? (
+            // Show a message if there is no video to upload
             <Text style={styles.noVideoText}>
-              No video available for this user.
+              No video available. You need to upload a video.
+            </Text>
+          ) : (
+            // Show a message if the video is hidden due to inappropriate language
+            <Text style={styles.noVideoText}>
+              Video is hidden due to inappropriate language. You need to delete
+              the video and upload again.
             </Text>
           )}
+
           {/* Conditionally render the + icon */}
           {!hasVideo && (
             <TouchableOpacity
@@ -351,6 +423,8 @@ const Home1 = () => {
               <Text style={styles.plusButtonText}>+</Text>
             </TouchableOpacity>
           )}
+
+          {/* Show additional buttons if a video is available */}
           {hasVideo && (
             <View style={styles.btnContainer}>
               <TouchableOpacity
@@ -532,7 +606,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     fontSize: 18,
     fontWeight: '600',
-    marginLeft: '20%',
+    marginLeft: '10%',
     color: '#ffffff',
   },
   subtitle: {

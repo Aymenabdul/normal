@@ -55,7 +55,8 @@ const LoginScreen = () => {
         const videoId = videos[0].videoId || null; // Use null if videoId is not available
         console.log('Extracted videoId:', videoId);
       } else {
-        console.error('Videos array is empty or videoId is not defined.');
+        // If no videos are found, videoId is null
+        const videoId = null;
       }
       if (firstName && jobOption) {
         // Check jobOption to navigate to the appropriate screen
@@ -64,15 +65,17 @@ const LoginScreen = () => {
           jobOption === 'Entrepreneur' ||
           jobOption === 'Freelancer'
         ) {
+          // Use videoId (which might be null) for storage
           await saveStorage(
             userId,
             firstName,
             jobOption,
             industry,
-            // videos[0].videoId || null || '',
+            videos[0] ? videos[0].videoId : null,
           );
           navigation.navigate('home1');
         } else if (jobOption === 'Employer' || jobOption === 'Investor') {
+          // Save the user data without videoId if not available
           await saveStorage(userId, firstName, jobOption, industry);
           navigation.navigate('HomeScreen', {
             firstName,
@@ -111,7 +114,9 @@ const LoginScreen = () => {
       await AsyncStorage.setItem('jobOption', jobOption);
       await AsyncStorage.setItem('industry', industry);
       await AsyncStorage.setItem('videoId', JSON.stringify(videoId));
-      console.log('Stored videoId:', videoId);
+      // Conditionally store or remove the videoId
+      console.log('stored userId', userId);
+      console.log('stored videoId', videoId);
     } catch (error) {
       console.error('Error saving data to AsyncStorage:', error);
     }
@@ -157,11 +162,45 @@ const LoginScreen = () => {
           const {given_name, email, picture} = response.data; // 'picture' contains the URL
 
           if (given_name && email && picture) {
-            console.log('LinkedIn User Details:', {given_name, email, picture});
 
-            setUserData({given_name, email, picture});
+            // Check if email is already signed up
+            const userResponse = await axios.get(`${env.baseURL}/users/check`, {
+              params: {email},
+            });
 
-            setShowRoleSelection(true);
+            if (userResponse.data.exists) {
+              // User exists, log them in (Skip role selection)
+              console.log('User already signed up, logging in...');
+              const {userId, jobOption,firstName} = userResponse.data;
+              await AsyncStorage.setItem('userId',JSON.stringify(userId));// Assuming userResponse contains userId and jobOption
+              await AsyncStorage.setItem('firstName',firstName);
+
+              // Navigate based on jobOption
+              if (jobOption === 'Employer' || jobOption === 'Investor') {
+                console.log('Navigating to HomeScreen...');
+                navigation.navigate('HomeScreen', {
+                  firstName,
+                  email,
+                  jobOption,
+                  userId,
+                });
+              } else if (
+                jobOption === 'Employee' ||
+                jobOption === 'Entrepreneur'
+              ) {
+                console.log('Navigating to home1...');
+                navigation.navigate('home1', {
+                  firstName,
+                  email,
+                  jobOption,
+                  userId,
+                });
+              }
+            } else {
+              // User doesn't exist, show role selection
+              setUserData({given_name, email, picture});
+              setShowRoleSelection(true);
+            }
           } else {
             Alert.alert('Error', 'User data is incomplete.');
           }
@@ -181,7 +220,7 @@ const LoginScreen = () => {
         }
       }
     }
-    handleRoleSelect();
+    handleRoleSelect(); // Make sure this is not running prematurely
   };
 
   const handleRoleSelect = async role => {

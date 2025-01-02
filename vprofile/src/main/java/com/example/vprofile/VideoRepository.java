@@ -1,6 +1,7 @@
 
 package com.example.vprofile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -11,7 +12,6 @@ import org.springframework.data.repository.query.Param;
 public interface VideoRepository extends JpaRepository<Video, Long> {
     // You can add custom query methods if needed
     Optional<Video> findByUserId(Long userId);
-    // List<Video> findBytheUserId(Long userId);
     Optional<Video> findById(Long videoId);
     List<Video> findAll();
 
@@ -30,7 +30,7 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
         List<Video> findByFilters(@Param("keySkills") String keySkills,
                                    @Param("experience") String experience,
                                    @Param("industry") String industry,
-                                   @Param("city") String city);
+                                   @Param("city") String city);                     
     
 
 }

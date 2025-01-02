@@ -1,5 +1,6 @@
 package com.example.vprofile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,11 +11,19 @@ import org.springframework.data.repository.query.Param;
 public interface LikeRepository extends JpaRepository<Like, Long> {
     boolean existsByUserIdAndVideoId(Long userId, Long videoId);  // Check if a user has liked the video
 
-    Long countByVideoId(Long videoId);  // Count likes for a specific video
+    Long countByVideoIdAndIsLikeTrue(Long videoId);
     Optional<Like> findByUserIdAndVideoId(Long userId, Long videoId);
+    
 
     @Query("SELECT v FROM Like l JOIN Video v ON l.videoId = v.id WHERE l.userId = :userId")
     List<Video> findLikedVideosByUserId(@Param("userId") Long userId);    
+
+    @Query("SELECT l.videoId, COUNT(l.id) AS likeCount " +
+           "FROM Like l " +
+           "WHERE l.createdAt >= :startOfWeek AND l.isLike = true " +
+           "GROUP BY l.videoId " +
+           "ORDER BY likeCount DESC")
+    List<Object[]> findTrendingVideos(@Param("startOfWeek") LocalDateTime startOfWeek);
 
 }
 

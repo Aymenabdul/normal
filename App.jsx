@@ -14,6 +14,8 @@ import Transcribe from './src/template/transcribe';
 import Account from './src/template/account';
 import LikeScreen from './src/template/likedvideo';
 import Edit from './src/template/Edit';
+import Filtered from './src/template/filterd';
+import Trending from './src/template/trending';
 const Stack = createNativeStackNavigator();
 const App = () => {
   useEffect(() => {
@@ -50,7 +52,9 @@ const App = () => {
           <Stack.Screen name="Transcribe" component={Transcribe}/>
           <Stack.Screen name="Account" component={Account}/>
           <Stack.Screen name="LikeScreen" component={LikeScreen}/>
+          <Stack.Screen name="Filtered" component={Filtered}/>
           <Stack.Screen name="Edit" component={Edit}/>
+          <Stack.Screen name="Trending" component={Trending}/>
         </Stack.Navigator>
       </NavigationContainer>
   );

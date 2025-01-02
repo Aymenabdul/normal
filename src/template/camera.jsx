@@ -282,9 +282,11 @@ const CameraPage = () => {
           style={styles.camicon}
         />
       </TouchableOpacity>
+
       <TouchableOpacity style={styles.infoButton}>
         <AntDesign name={'infocirlce'} size={30} style={styles.infoicon} />
       </TouchableOpacity>
+
       {/* Timer */}
       <View style={styles.timer}>
         <Text style={styles.timerText}>
@@ -483,17 +485,16 @@ const styles = StyleSheet.create({
   },
   switchCameraButton: {
     position: 'absolute',
-    bottom: 20,
-    left: '50%',
+    bottom:'8%',
+    left: '25%',
     transform: [{translateX: -50}],
-    backgroundColor: '#000',
     padding: 10,
     borderRadius: 10,
   },
   infoButton: {
     position: 'absolute',
-    bottom: 20,
-    left: '50%',
+    bottom: '6%',
+    left: '90%',
     transform: [{translateX: -50}],
     padding: 10,
   },
@@ -504,13 +505,11 @@ const styles = StyleSheet.create({
   camicon: {
     color: '#ffffff',
     position: 'absolute',
-    bottom: 40,
-    right: 90,
   },
   infoicon: {
     color: '#ffffff',
-    left: 176,
-    bottom: 38,
+    // left: 176,
+    // bottom: 38,
   },
 });
 

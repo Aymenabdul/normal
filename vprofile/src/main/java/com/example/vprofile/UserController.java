@@ -22,18 +22,21 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    @PostMapping // Handle POST requests to /users
-    public ResponseEntity<Map<String, Object>> createUser(@RequestBody User user) {
-        userService.saveUser(user); // Save user details
-        
-        // Create a response map
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "User created successfully.");
-        response.put("userId", user.getId()); // Include the userId in the response
-        
-        // Return the response with the CREATED status
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    @Autowired
+    private VerificationTokenService verificationTokenService;
+
+    @PostMapping
+public ResponseEntity<Map<String, Object>> registerUser(@RequestBody User user) {
+    // Generate a unique verification token
+    String token = verificationTokenService.createTemporaryToken(user);
+
+    // Prepare response
+    Map<String, Object> response = new HashMap<>();
+    response.put("message", "Verification email sent successfully. Please verify your email to complete registration.");
+    response.put("verificationToken", token); // Include for testing; remove in production.
+
+    return ResponseEntity.status(HttpStatus.CREATED).body(response);
+}
 
     @PostMapping("/check-email")
     public ResponseEntity<Map<String, Boolean>> checkEmail(@RequestBody Map<String, String> emailPayload) {

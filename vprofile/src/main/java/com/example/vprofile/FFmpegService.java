@@ -26,14 +26,18 @@ public class FFmpegService {
         // Ensure ffmpegPath is hardcoded
         ffmpegPath = "/usr/bin/ffmpeg";
 
-        // Command arguments for FFmpeg
+        // Path to the watermark image
+        String watermarkPath = "/home/wezume/htdocs/wezume.in/img/watermark.png";
+
+        // Command to overlay watermark with scaling applied only to watermark
         String[] command = {
             ffmpegPath,
             "-i", inputFile.getAbsolutePath(),
+            "-i", watermarkPath,
+            "-filter_complex", "[1:v]scale=300:150[wm];[0:v][wm]overlay=x=W-w-10:y=10",
             "-vcodec", "libx264",
             "-preset", "ultrafast",
             "-crf", "30",
-            "-vf", "scale=1280:-1",
             "-f", "mp4",
             outputFile.getAbsolutePath()
         };
@@ -56,14 +60,12 @@ public class FFmpegService {
         }
 
         // Log the FFmpeg output for debugging
-        System.out.println("FFmpeg output: " + output.toString());
+        System.out.println("FFmpeg output: " + output);
 
-        // Wait for process to complete
+        // Wait for the process to complete
         int exitCode = process.waitFor();
         if (exitCode != 0) {
             throw new IOException("FFmpeg process failed with exit code " + exitCode);
         }
     }
 }
-
-

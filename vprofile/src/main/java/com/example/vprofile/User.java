@@ -40,13 +40,14 @@ public class User {
     // New fields added
     private String city;
     private Integer establishedYear; // Assuming this is the year the user's organization was established
-    private String languages; // To store multiple languages
+
+    private boolean enabled;
 
     // Constructors
     public User(Long id, String firstName, String lastName, String email, String phoneNumber, String password,
                 String jobOption, byte[] profilePic, String currentRole, String keySkills,
                 String experience, String industry, String currentEmployer, String languagesKnown,
-                String city, Integer establishedYear, String languages) {
+                String city, Integer establishedYear, boolean enabled) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -63,7 +64,7 @@ public class User {
         this.languagesKnown = languagesKnown;
         this.city = city;
         this.establishedYear = establishedYear;
-        this.languages = languages;
+        this.enabled = enabled;
     }
 
     public User() {}
@@ -83,14 +84,6 @@ public class User {
 
     public void setEstablishedYear(Integer establishedYear) {
         this.establishedYear = establishedYear;
-    }
-
-    public String getLanguages() {
-        return languages;
-    }
-
-    public void setLanguages(String languages) {
-        this.languages = languages;
     }
 
     // Existing Getters and Setters remain unchanged
@@ -205,5 +198,13 @@ public class User {
 
     public void setLanguagesKnown(String languagesKnown) {
         this.languagesKnown = languagesKnown;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

@@ -30,6 +30,10 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -67,23 +71,34 @@ public class VideoService {
         // Validate the user ID
         validateUser(userId);
 
-        // Save the uploaded file temporarily (no change here)
+        // Save the uploaded file temporarily
         Path videoFilePath = saveUploadedFile(file);
         System.out.println("Video file saved at: " + videoFilePath);
 
         // Create a temporary file for the compressed video
-        File tempCompressedFile = new File("compressed_" + file.getOriginalFilename());
+        File tempCompressedFile = new File(uploadDir, "compressed_" + file.getOriginalFilename());
 
-        // Compress the video using FFmpeg before reading it as bytes
-        ffmpegService.compressVideo(videoFilePath.toFile(), tempCompressedFile); // Call compressVideo here
-        System.out.println("Compressed video saved at: " + tempCompressedFile.getAbsolutePath());
+        // Compress the video
+        System.out.println("Starting video compression...");
+        try {
+            ffmpegService.compressVideo(videoFilePath.toFile(), tempCompressedFile);
+            System.out.println("Video compressed successfully to: " + tempCompressedFile.getAbsolutePath());
+        } catch (Exception e) {
+            System.err.println("Error during video compression: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
 
-        // Read the compressed video file as bytes (this is the compressed version)
+        // Verify compressed file
+        if (!tempCompressedFile.exists() || tempCompressedFile.length() == 0) {
+            throw new RuntimeException("Compressed video file was not created or is empty.");
+        }
+
+        // Read the compressed video file as bytes
         byte[] compressedVideoBytes = java.nio.file.Files.readAllBytes(tempCompressedFile.toPath());
-        System.out.println("Compressed video file size: " + compressedVideoBytes.length); // Log the size of the
-                                                                                          // compressed video
+        System.out.println("Compressed video file size: " + compressedVideoBytes.length + " bytes");
 
-        // Extract audio and perform transcription (same as before)
+        // Extract audio and perform transcription
         String audioUrl = extractAudioWithTransloadit(videoFilePath);
         System.out.println("Audio file extracted at: " + audioUrl);
 
@@ -93,18 +108,12 @@ public class VideoService {
         String transcription = convertAudioToText(downloadedAudioPath);
         System.out.println("Transcription completed: " + transcription);
 
-        // Create the Video entity (save the compressed video)
+        // Create the Video entity
         Video video = new Video(file.getOriginalFilename(), compressedVideoBytes, userId, transcription,
                 downloadedAudioPath);
-
-        // Set the file path to the original path (no change)
-        video.setFilePath(videoFilePath.toString());
-        // Set the compressed video data
+        video.setFilePath(tempCompressedFile.getAbsolutePath());
         video.setVideoData(compressedVideoBytes);
         System.out.println("Video entity created: " + video);
-
-        // Delete temporary compressed file after use
-        tempCompressedFile.delete();
 
         // Save and return the video
         return videoRepository.save(video);
@@ -443,13 +452,11 @@ public class VideoService {
         }
     }
 
-    // Get the total number of likes for a video
     public Long getLikeCount(Long videoId) {
-        System.out.println("Fetching like count for video " + videoId);
-        Long likeCount = likeRepository.countByVideoId(videoId);
-        System.out.println("Total likes for video " + videoId + ": " + likeCount);
-        return likeCount;
+        // Call the repository method to count likes for the video
+        return likeRepository.countByVideoIdAndIsLikeTrue(videoId);
     }
+
     public Video getVideoById(Long videoId) {
         return videoRepository.findById(videoId).orElse(null);
     }
@@ -462,5 +469,10 @@ public class VideoService {
     public List<Video> getLikedVideosByUserId(Long userId) {
         // Fetch the liked videos for the given userId
         return likeRepository.findLikedVideosByUserId(userId);
+    }
+
+    public List<Object[]> getTrendingVideos() {
+        LocalDateTime startOfWeek = LocalDateTime.now().minusDays(7);
+        return likeRepository.findTrendingVideos(startOfWeek);
     }
 }

@@ -1,7 +1,7 @@
 // env.js
 const ENV = {
   dev: {
-    baseURL: 'http://192.168.1.10:8080',
+    baseURL: 'http://172.20.10.4:8080',
   },
   prod: {
     baseURL: 'http://89.116.134.110:8081',
