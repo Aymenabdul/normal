@@ -153,13 +153,13 @@ const Profile = () => {
         `${env.baseURL}/api/videos/filter`,
         filterData,
       );
-      const filteredVideos = response.data;
-      console.log('Filtered videos received:', filteredVideos);
+      const filteredVideo = response.data;
+      console.log('Filtered videos received:', filteredVideo);
 
-      if (Array.isArray(filteredVideos) && filteredVideos.length > 0) {
-        const videosWithUri = filteredVideos.map(video => ({
+      if (Array.isArray(filteredVideo) && filteredVideo.length > 0) {
+        const videosWithUri = filteredVideo.map(video => ({
           ...video,
-          uri: `${env.baseURL}/api/videos/user/${video.id}`,
+          uri: `${env.baseURL}/api/videos/user/${video.userId}`,
         }));
 
         setFilteredVideos(videosWithUri);

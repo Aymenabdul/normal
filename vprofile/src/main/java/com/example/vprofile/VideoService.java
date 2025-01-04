@@ -475,4 +475,18 @@ public class VideoService {
         LocalDateTime startOfWeek = LocalDateTime.now().minusDays(7);
         return likeRepository.findTrendingVideos(startOfWeek);
     }
+
+    public String getVideoPathByUserId(Long userId) {
+        // Fetch the video record associated with the user ID
+        Optional<Video> videoOptional = videoRepository.findByUserId(userId);
+
+        // Return the video path if found
+        return videoOptional.map(Video::getFilePath).orElse(null);
+    }
+
+    public String getVideoPathById(Long videoId) {
+        return videoRepository.findById(videoId)
+                .map(Video::getFilePath)
+                .orElse(null);
+    }
 }

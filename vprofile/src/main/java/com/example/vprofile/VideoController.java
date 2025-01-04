@@ -1,6 +1,7 @@
 
 package com.example.vprofile;
 
+import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -44,11 +45,15 @@ public class VideoController {
     @Autowired
     private NotificationService notificationService;
 
+    private  VideoProfanityService videoProfanityService;
+
     @Autowired
-    public VideoController(FFmpegService ffmpegService, VideoService videoService) {
+    public VideoController(FFmpegService ffmpegService, VideoService videoService,VideoProfanityService videoProfanityService) {
         this.ffmpegService = ffmpegService;
         this.videoService = videoService;
+        this.videoProfanityService = videoProfanityService;
     }
+
 
 
     @PostMapping("/upload")
@@ -458,7 +463,6 @@ public ResponseEntity<User> getOwnerByUserId(@PathVariable("userId") Long userId
         try {
             // Retrieve the list of video IDs associated with the user
             List<Long> videoIds = videoService.getVideoIdsByUserId(userId);
-
             if (videoIds.isEmpty()) {
                 return ResponseEntity.noContent().build(); // Return 204 if no videos found
             }
@@ -503,9 +507,48 @@ public ResponseEntity<List<Map<String, Object>>> getLikedVideosByUserId(@Request
 }
 
 @GetMapping("/trending")
-    public ResponseEntity<?> getTrendingVideos() {
-        List<Object[]> trendingVideos = videoService.getTrendingVideos();
-        return ResponseEntity.ok(trendingVideos);
+public ResponseEntity<?> getTrendingVideos() {
+    List<Object[]> trendingVideos = videoService.getTrendingVideos();
+    
+    // Create a response to return video data along with like information
+    List<Map<String, Object>> videoResponses = new ArrayList<>();
+    for (Object[] videoData : trendingVideos) {
+        Map<String, Object> videoDataMap = new HashMap<>();
+        
+        // Assuming videoData[0] is videoId, videoData[1] is userId, and videoData[2] is likeCount
+        videoDataMap.put("userId", videoData[0]);
+        videoDataMap.put("videoId", videoData[1]);
+        videoDataMap.put("likeCount", videoData[2]); // Adjust if the like count is in a different position
+        
+        videoResponses.add(videoDataMap);
     }
-
+    
+    return ResponseEntity.ok(videoResponses);
 }
+
+    @PostMapping("/check-profanity")
+    public ResponseEntity<Map<String, Object>> checkProfanity(@RequestParam("userId") Long userId, @RequestParam("videoId") Long videoId) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            User user = userService.getUserById(userId);
+            if (user == null) {
+                response.put("error", "Invalid User ID");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            String videoPath = videoService.getVideoPathById(videoId);
+            if (videoPath == null || videoPath.isEmpty()) {
+                response.put("error", "Invalid Video ID");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            Boolean isOffensive = videoProfanityService.analyzeVideo(userId, videoId, videoPath);
+            response.put("containsProfanity", isOffensive);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.put("error", "Error analyzing video");
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+};

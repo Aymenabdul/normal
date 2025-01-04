@@ -292,7 +292,7 @@ const Home1 = () => {
 
   useEffect(() => {
     const fetchNotifications = async userId => {
-      // Add userId as a parameter here
+      // Ensure userId is valid
       if (!userId) {
         console.error('User ID is missing');
         return;
@@ -301,14 +301,14 @@ const Home1 = () => {
       console.log('notification userId ', userId);
       try {
         const response = await axios.get(`${env.baseURL}/api/notifications`, {
-          params: {userId}, // Make sure the userId is passed correctly
+          params: {userId},
         });
 
         const notifications = response.data;
 
         if (notifications.length > 0) {
           // Display the latest notification
-          const latestNotification = notifications[0]; // Or process all if needed
+          const latestNotification = notifications[0];
 
           await notifee.displayNotification({
             title: 'Wezume',
@@ -329,14 +329,20 @@ const Home1 = () => {
         console.error('Error fetching notifications:', error);
       }
     };
-    if (userId) {
-      fetchNotifications(userId); // Call it with the userId
-      const intervalId = setInterval(() => fetchNotifications(userId), 5000); // Pass userId on interval calls
-      return () => clearInterval(intervalId); // Cleanup on unmount
+
+    // Run the logic only if userId is valid and hasVideo is true
+    if (userId && hasVideo) {
+      fetchNotifications(userId); // Call it immediately
+      const intervalId = setInterval(() => fetchNotifications(userId), 5000); // Set up interval to call periodically
+
+      // Cleanup interval on component unmount or when hasVideo changes
+      return () => clearInterval(intervalId);
+    } else if (!hasVideo) {
+      console.log('User has no video, skipping notification fetching');
     } else {
       console.error('UserId is undefined or invalid.');
     }
-  }, [userId]); // Trigger useEffect whenever userId changes
+  }, [userId, hasVideo]); // Dependency on userId and hasVideo
 
   useEffect(() => {
     const loadDataFromStorage = async () => {
@@ -396,11 +402,10 @@ const Home1 = () => {
               <Video
                 source={{uri: videoUri}}
                 style={styles.videoPlayer}
-                resizeMode="contain"
+                resizeMode="cover"
                 controls={true}
                 onProgress={e => setCurrentTime(e.currentTime)} // Track current time
               />
-              <Text style={styles.subtitle}>{currentSubtitle}</Text>
             </TouchableOpacity>
           ) : !hasVideo ? (
             // Show a message if there is no video to upload
@@ -414,7 +419,6 @@ const Home1 = () => {
               the video and upload again.
             </Text>
           )}
-
           {/* Conditionally render the + icon */}
           {!hasVideo && (
             <TouchableOpacity
@@ -447,6 +451,7 @@ const Home1 = () => {
               </TouchableOpacity>
             </View>
           )}
+          <Text style={styles.subtitle}>{currentSubtitle}</Text>
         </View>
       </ImageBackground>
     </View>
@@ -478,9 +483,8 @@ const styles = StyleSheet.create({
   videoPlayer: {
     marginLeft: 10,
     marginRight: 10,
-    height: 700,
+    height: 600,
     borderRadius: 10,
-    elevation: 10,
   },
   transcriptionButton: {
     marginTop: -15,
@@ -610,14 +614,13 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   subtitle: {
-    position: 'absolute',
-    bottom: '10%',
-    left: '10%',
-    right: '10%',
+    position: 'relative',
+    bottom: '30%',
     color: 'white',
-    fontSize: 18,
+    fontSize:22,
     padding: 5,
     textAlign: 'center',
+    zIndex:10,
   },
   buttoncls: {
     color: '#ffffff',

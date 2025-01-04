@@ -24,10 +24,10 @@ public class FFmpegService {
 
     public void compressVideo(File inputFile, File outputFile) throws IOException, InterruptedException {
         // Ensure ffmpegPath is hardcoded
-        ffmpegPath = "/usr/bin/ffmpeg";
+        ffmpegPath = ".\\bin\\ffmpeg";
 
         // Path to the watermark image
-        String watermarkPath = "/home/wezume/htdocs/wezume.in/img/watermark.png";
+        String watermarkPath = ".\\bin\\watermark.png";
 
         // Command to overlay watermark with scaling applied only to watermark
         String[] command = {

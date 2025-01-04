@@ -115,7 +115,7 @@ const Header = ({Value, profile, userName}) => {
       style={styles.header}>
       {/* Left Section - Profile */}
       <View style={styles.profileSection}>
-        <TouchableOpacity onPress={() => navigation.navigate('Account')}>
+        <TouchableOpacity onPress={() => navigation.navigate('Account')} style={{flexDirection:'row'}}>
           <View style={styles.profileContainer}>
             {profile ? (
               <Image source={{uri: profile}} style={styles.profileImage} />
@@ -123,10 +123,10 @@ const Header = ({Value, profile, userName}) => {
               <User name="user" color="#ffffff" size={30} />
             )}
           </View>
-        </TouchableOpacity>
-        <View style={styles.option}>
+          <View style={styles.option}>
           <Text style={styles.userName}>{userName}</Text>
         </View>
+        </TouchableOpacity>
       </View>
 
       <TouchableOpacity

@@ -18,12 +18,14 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
     @Query("SELECT v FROM Like l JOIN Video v ON l.videoId = v.id WHERE l.userId = :userId")
     List<Video> findLikedVideosByUserId(@Param("userId") Long userId);    
 
-    @Query("SELECT l.videoId, COUNT(l.id) AS likeCount " +
+    @Query("SELECT v.userId, l.videoId, COUNT(l.id) AS likeCount " +
            "FROM Like l " +
+           "JOIN Video v ON l.videoId = v.id " + // Assuming there's a Video table and a relation with Like
            "WHERE l.createdAt >= :startOfWeek AND l.isLike = true " +
-           "GROUP BY l.videoId " +
+           "GROUP BY l.videoId, v.userId " +
            "ORDER BY likeCount DESC")
-    List<Object[]> findTrendingVideos(@Param("startOfWeek") LocalDateTime startOfWeek);
+List<Object[]> findTrendingVideos(@Param("startOfWeek") LocalDateTime startOfWeek);
+
 
 }
 

@@ -318,6 +318,23 @@ const Edit = () => {
   };
 
   const handleUpdateProfile = async () => {
+    if (!email) {
+      Alert.alert('Email is required!');
+      return;
+    }
+
+    if (!phoneNumber) {
+      Alert.alert('Phone Number is required!');
+      return;
+    }
+    if(password !== confirmPassword){
+      Alert.alert('please type the password correctly !!!');
+      return;
+    }
+    if (phoneNumber.length !== 10) {
+      Alert.alert('Enter a valid mobile number');
+      return;
+    }
     setLoading(true);
     try {
       const updatedUserData = {
@@ -352,10 +369,7 @@ const Edit = () => {
         {
           text: 'OK',
           onPress: () => {
-            navigation.reset({
-              index: 0,
-              routes: [{name: 'home1'}],
-            }); // Navigate to the previous screen or dashboard
+            navigation.goBack(); // Navigate to the previous screen
           },
         },
       ]);

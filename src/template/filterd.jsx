@@ -104,7 +104,9 @@ const Filtered = ({ route, navigation }) => {
       setHasVideo(false); // Hide video display
     }
   }, [filteredVideos, isFiltered]); // Dependency on filteredVideos and isFiltered
-
+console.log('====================================');
+console.log('filterd ... ',filteredVideos);
+console.log('====================================');
   // If no filtered videos are passed, fetch all videos and profile picture
   useEffect(() => {
     // Assuming fetchFilteredVideos and fetchProfilePic are defined elsewhere
@@ -112,16 +114,17 @@ const Filtered = ({ route, navigation }) => {
     try {
       // Logic to fetch all videos if not filtered
       const response = await fetch(`${env.baseURL}/api/videos/user/${Video.userId}`);
+      console.log(response);
       const data = await response.json();
       setVideoUrl(data);
       setHasVideo(data.length > 0);
     } catch (error) {
-      console.error("Error fetching all videos:", error);
+      console.error('Error fetching all videos:', error);
       setHasVideo(false);
     }
   };
     if (!isFiltered || filteredVideos.length === 0) {
-      fetchFilteredVideos(videoId); // Fetch all videos if not filtered
+      fetchFilteredVideos(userId); // Fetch all videos if not filtered
       fetchProfilePic(userId); // Fetch profile pic for user
     }
   }, [isFiltered, filteredVideos, userId,videoId]); // Dependency on isFiltered, filteredVideos, userId
@@ -439,7 +442,7 @@ const Filtered = ({ route, navigation }) => {
               <Video
                 source={{uri: selectedVideoUri}}
                 style={styles.fullScreenVideo}
-                controls={true}
+                controls={false}
                 resizeMode="cover"
                 onError={error => console.error('Video playback error:', error)}
               />
@@ -564,16 +567,16 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     position: 'absolute',
     top: 15,
-    right: '89%',
+    right: '',
     fontSize: 24,
     fontWeight: '900',
   },
   buttonheart: {
     position: 'absolute',
     top: '62%',
-    right: '5%',
+    right:40,
     color: '#ffffff',
-    paddingRight: 40,
+    // paddingRight: 40,
     fontSize: 30,
     zIndex: 100,
     elevation: 10,
@@ -581,9 +584,9 @@ const styles = StyleSheet.create({
   buttonshare: {
     position: 'absolute',
     top: '69%',
-    right: '5%',
+    right:40,
     color: '#ffffff',
-    paddingRight: 40,
+    // paddingRight: 40,
     fontSize: 30,
     zIndex: 100,
     elevation: 10,
@@ -591,8 +594,8 @@ const styles = StyleSheet.create({
   buttonphone: {
     position: 'absolute',
     top: '75%',
-    right: '5%',
-    paddingRight: 40,
+    right:40,
+    // paddingRight: 40,
     color: '#ffffff',
     fontSize: 22,
     zIndex: 100,
@@ -601,8 +604,8 @@ const styles = StyleSheet.create({
   buttonmsg: {
     position: 'absolute',
     top: '80%',
-    right: '5%',
-    paddingRight: 40,
+    right:40,
+    // paddingRight: 40,
     color: '#ffffff',
     fontSize: 30,
     zIndex: 100,
@@ -610,10 +613,10 @@ const styles = StyleSheet.create({
   },
   count: {
     position: 'absolute',
-    right: 0,
+    right:46,
     color: '#ffffff',
-    padding: 46,
-    top: '60%',
+    // padding: 46,
+    top: '65.5%',
     fontWeight: '900',
     zIndex: 100,
     elevation: 10,
