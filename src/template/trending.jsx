@@ -33,6 +33,7 @@ import {
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { log } from 'console';
 
 
 const HomeScreen = () => {
@@ -147,9 +148,6 @@ const HomeScreen = () => {
   };
 
   useEffect(() => {
-    console.log('selectedVideoUri:', selectedVideoUri);
-    console.log('currentIndex:', currentIndex);
-    console.log('videosToDisplay:', videourl);
 
     if (
       selectedVideoUri &&
@@ -198,7 +196,7 @@ const HomeScreen = () => {
           const response = await axios.get(
             `${env.baseURL}/api/videos/user/${videoId}/details`,
           );
-          console.log('User details response:', response.data); // Log the user details
+          // console.log('User details response:', response.data); // Log the user details
           const {
             firstName: fetchedFirstName,
             profileImage: fetchedProfileImage,
@@ -243,12 +241,12 @@ const HomeScreen = () => {
       };
 
       // Call the fetchPhoneNumber function
-      fetchPhoneNumber();
+      fetchPhoneNumber(videoId);
 
       // Fetch all data for the current video
       fetchLikeStatus(); // Fetch like status for the current video
       fetchLikeCount(); // Fetch like count for the current video
-      fetchUserDetails(); // Fetch user details for the current video
+      fetchUserDetails(videoId); // Fetch user details for the current video
     }
   }, [selectedVideoUri, currentIndex, videourl, userId]); // Dependencies
 
@@ -363,13 +361,13 @@ const HomeScreen = () => {
   useEffect(() => {
     const backAction = () => {
       // Optional: Show a confirmation alert before exiting the app
-      Alert.alert('Exit App', 'Do you want to go back?', [
+      Alert.alert('Exit App', 'Do you want to exit the app?', [
         {
           text: 'Cancel',
           onPress: () => null,
           style: 'cancel',
         },
-        {text: 'Yes', onPress: () => navigation.goBack()},
+        {text: 'Yes', onPress: () => BackHandler.exitApp()},
       ]);
 
       // Returning true indicates that we have handled the back press
@@ -383,7 +381,7 @@ const HomeScreen = () => {
     return () => {
       BackHandler.removeEventListener('hardwareBackPress', backAction);
     };
-  }, [navigation]);
+  }, []);
 
   const fetchLikeStatus = async () => {
     try {
@@ -413,6 +411,7 @@ const HomeScreen = () => {
 
         // Directly parse JSON without additional checks
         const videoData = await response.json();
+     console.log('video data ..... ', videoData);
         // Exit early if no data is returned
         if (!Array.isArray(videoData) || videoData.length === 0) {
           console.warn('No videos available');
@@ -423,7 +422,6 @@ const HomeScreen = () => {
 
         // Process video data in a single pass and update state
         const videoURIs = videoData.reduce((acc, video) => {
-          setVideoId(video.videoId);
           acc.push({
             id: video.videoId,
             title: video.title || 'Untitled Video',
@@ -520,7 +518,7 @@ const HomeScreen = () => {
   };
 
   // Handle dislike action
-  const handleDislike = async videoId => {
+  const handleDislike = async () => {
     const newLikedState = !isLiked[videoId]; // Toggle the dislike status (opposite of like)
     setIsLiked(prevState => ({
       ...prevState,
@@ -540,9 +538,10 @@ const HomeScreen = () => {
     }
   };
 
-  const openModal = async (uri, videoId) => {
+  const openModal = async (uri, videoId, index) => {
     console.log('Video ID:', videoId); // Debugging: Check if videoId is passed correctly
     setVideoId(videoId);
+    setCurrentIndex(index);
     // Directly use videoId in the function
     try {
       // Fetch user details by videoId
@@ -630,9 +629,9 @@ const HomeScreen = () => {
         <View style={{height: '0.3%'}}></View>
         <FlatList
           data={videourl}
-          renderItem={({item}) => (
+          renderItem={({item,index}) => (
             <TouchableOpacity
-              onPress={() => openModal(item.uri, item.id)} // Pass video URI and ID
+              onPress={() => openModal(item.uri, item.id,index)} // Pass video URI and ID
               style={styles.videoItem}>
               <Video
                 source={{uri: item.uri}}
@@ -677,7 +676,7 @@ const HomeScreen = () => {
                       console.error('Video playback error:', error)
                     }
                   />
-                  <TouchableOpacity onPress={''} style={styles.trending1}>
+                  <TouchableOpacity onPress={()=>navigation.navigate('Trending')} style={styles.trending1}>
                     <Text style={{color: '#ffffff', fontWeight: '600'}}>
                       #Trending
                     </Text>

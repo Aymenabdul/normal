@@ -24,7 +24,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const {width} = Dimensions.get('window');
 
-const Header = ({Value, profile, userName}) => {
+const Header = ({Value, profile, userName, jobOption,userId}) => {
   const navigation = useNavigation();
   const [menuVisible, setMenuVisible] = useState(false);
   const slideAnimation = useRef(new Animated.Value(width)).current; // Initial position off-screen to the left
@@ -115,7 +115,9 @@ const Header = ({Value, profile, userName}) => {
       style={styles.header}>
       {/* Left Section - Profile */}
       <View style={styles.profileSection}>
-        <TouchableOpacity onPress={() => navigation.navigate('Account')} style={{flexDirection:'row'}}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Account')}
+          style={{flexDirection: 'row'}}>
           <View style={styles.profileContainer}>
             {profile ? (
               <Image source={{uri: profile}} style={styles.profileImage} />
@@ -124,8 +126,8 @@ const Header = ({Value, profile, userName}) => {
             )}
           </View>
           <View style={styles.option}>
-          <Text style={styles.userName}>{userName}</Text>
-        </View>
+            <Text style={styles.userName}>{userName}</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -160,9 +162,23 @@ const Header = ({Value, profile, userName}) => {
               </Text>
             </TouchableOpacity>
             <View style={styles.line}></View>
-            <TouchableOpacity onPress={() =>[navigation.navigate('profile'),setIsModalVisible(false) ]}>
+            <TouchableOpacity
+              onPress={() => [
+                navigation.navigate('profile'),
+                setIsModalVisible(false),
+              ]}>
               <Text style={styles.options}>
                 <Search name={'search'} size={22} color={'grey'} /> Search
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.line}></View>
+            {/* Check if the user's job role is 'employee' or 'entrepreneur' */}
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate('home1', {userName,userId})
+              }>
+              <Text style={styles.options}>
+                <Video name={'video'} size={22} color={'grey'} /> My Video
               </Text>
             </TouchableOpacity>
             <View style={styles.line}></View>
@@ -179,8 +195,7 @@ const Header = ({Value, profile, userName}) => {
               </Text>
             </TouchableOpacity>
             <View style={styles.line}></View>
-            <TouchableOpacity
-              onPress={logouts}>
+            <TouchableOpacity onPress={logouts}>
               <Text style={styles.options}>
                 <Logout name={'logout'} size={20} color={'grey'} /> Logout
               </Text>
@@ -259,7 +274,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     height: 70,
-    zIndex:100,
+    zIndex: 100,
   },
   profileSection: {
     marginLeft: 10,
@@ -300,7 +315,7 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     marginRight: '5%',
-    zIndex:10,
+    zIndex: 10,
   },
   modalOverlay: {
     flex: 1,
@@ -311,7 +326,7 @@ const styles = StyleSheet.create({
   modalMenu: {
     width: '80%',
     height: '100%',
-    backgroundColor: 'white',
+    backgroundColor:'rgba(255, 255, 255,0.8)',
     padding: 20,
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
@@ -329,7 +344,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   closeButtonText: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '600',
     color: '#000',
   },
@@ -340,7 +355,7 @@ const styles = StyleSheet.create({
   },
   line: {
     width: '90%', // Adjusted to span across most of the modal
-    backgroundColor: '#ccc', // Corrected from `color` to `backgroundColor`
+    backgroundColor: '#000', // Corrected from `color` to `backgroundColor`
     height: 1, // Keeps the line thin
     alignSelf: 'flex-start', // Centers the line within the container
     marginVertical: 5, // Adds spacing between lines

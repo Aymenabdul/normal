@@ -18,7 +18,7 @@ import axios from 'axios';
 import {Buffer} from 'buffer';
 import Video from 'react-native-video';
 import Header from './header';
-import {useRoute, useNavigation} from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 import Ant from 'react-native-vector-icons/AntDesign';
 import Shares from 'react-native-vector-icons/Entypo';
 import Like from 'react-native-vector-icons/Foundation';
@@ -33,7 +33,6 @@ import {
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -198,7 +197,7 @@ const HomeScreen = () => {
           const response = await axios.get(
             `${env.baseURL}/api/videos/user/${videoId}/details`,
           );
-          console.log('User details response:', response.data); // Log the user details
+          // console.log('User details response:', response.data); // Log the user details
           const {
             firstName: fetchedFirstName,
             profileImage: fetchedProfileImage,
@@ -520,7 +519,10 @@ const HomeScreen = () => {
   };
 
   // Handle dislike action
-  const handleDislike = async videoId => {
+  const handleDislike = async () => {
+    console.log('====================================');
+    console.log(videoId);
+    console.log('====================================');
     const newLikedState = !isLiked[videoId]; // Toggle the dislike status (opposite of like)
     setIsLiked(prevState => ({
       ...prevState,
@@ -540,9 +542,10 @@ const HomeScreen = () => {
     }
   };
 
-  const openModal = async (uri, videoId) => {
+  const openModal = async (uri, videoId, index) => {
     console.log('Video ID:', videoId); // Debugging: Check if videoId is passed correctly
     setVideoId(videoId);
+    setCurrentIndex(index);
     // Directly use videoId in the function
     try {
       // Fetch user details by videoId
@@ -627,13 +630,16 @@ const HomeScreen = () => {
       <ImageBackground
         source={require('./assets/login.jpg')}
         style={styles.imageBackground}>
-        <View style={{height: '0.3%'}}></View>
+        {/* <View style={{height: '0.3%'}}></View> */}
         <FlatList
           data={videourl}
-          renderItem={({item}) => (
+          renderItem={({item, index}) => (
             <TouchableOpacity
-              onPress={() => openModal(item.uri, item.id)} // Pass video URI and ID
-              style={styles.videoItem}>
+              onPress={() => openModal(item.uri, item.id, index)} // Pass video URI and ID
+              style={[
+                styles.videoItem,
+                index >= 4 && index < 8 ? styles.secondRow : null, // Apply styles to the second row
+              ]}>
               <Video
                 source={{uri: item.uri}}
                 style={styles.videoPlayer}
@@ -645,6 +651,7 @@ const HomeScreen = () => {
           keyExtractor={item => item.id}
           numColumns={4}
           contentContainerStyle={styles.videoList}
+          columnWrapperStyle={styles.columnWrapper}
         />
       </ImageBackground>
 
@@ -677,7 +684,9 @@ const HomeScreen = () => {
                       console.error('Video playback error:', error)
                     }
                   />
-                  <TouchableOpacity onPress={()=>navigation.navigate('Trending')} style={styles.trending1}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('Trending')}
+                    style={styles.trending1}>
                     <Text style={{color: '#ffffff', fontWeight: '600'}}>
                       #Trending
                     </Text>
@@ -696,6 +705,7 @@ const HomeScreen = () => {
                     <Ant name={'arrowleft'} style={styles.buttoncls} />
                   </TouchableOpacity>
                   <TouchableOpacity
+                    activeOpacity={1}
                     onPress={() =>
                       isLiked[videoId] ? handleDislike() : handleLike()
                     }>
@@ -708,13 +718,15 @@ const HomeScreen = () => {
                     />
                     <Text style={styles.count}>{likeCount}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={shareOption}>
+                  <TouchableOpacity activeOpacity={1} onPress={shareOption}>
                     <Shares name={'share'} style={styles.buttonshare} />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={sendWhatsappMessage}>
+                  <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={sendWhatsappMessage}>
                     <Whatsapp name={'whatsapp'} style={styles.buttonmsg} />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={makeCall}>
+                  <TouchableOpacity activeOpacity={1} onPress={makeCall}>
                     <Phone name={'phone-volume'} style={styles.buttonphone} />
                   </TouchableOpacity>
                 </View>
@@ -734,23 +746,25 @@ const styles = StyleSheet.create({
   },
   videoItem: {
     flex: 1,
-    margin: 1,
-    marginTop: '-16.5%',
-    marginBottom: '4%',
-    zIndex: 10,
+    // marginTop: '-16.5%',
+    // marginBottom: '4%',
+    // zIndex: 10,
+  },
+  columnWrapper: {
+    justifyContent: 'flex-start',
+    gap: 1,
   },
   videoPlayer: {
-    height: 230,
-    width: '100%', // Adjust width for a uniform layout
+    height:190,
+    width:'100%', // Adjust width for a uniform layout
   },
   imageBackground: {
     flex: 1,
     justifyContent: 'center',
   },
   videoList: {
-    marginTop: '1%',
-    paddingHorizontal: 2, // Padding around the list
-    paddingTop: 10,
+    marginTop: '1',
+    // paddingHorizontal: 2, // Padding around the list
   },
   emptyListText: {
     textAlign: 'center',
@@ -761,7 +775,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)', // Dark background for the modal
+    // backgroundColor: 'rgba(0, 0, 0, 0.8)', // Dark background for the modal
+  },
+  secondRow:{
+marginTop:'1%',
   },
   modalContent: {
     width: '100%',
@@ -807,6 +824,7 @@ const styles = StyleSheet.create({
     right: '89%',
     fontSize: 24,
     fontWeight: '900',
+    backgroundColor: '#000',
   },
   buttonheart: {
     position: 'absolute',
@@ -814,7 +832,7 @@ const styles = StyleSheet.create({
     right: 40,
     color: '#ffffff',
     fontSize: 30,
-    zIndex: 100,
+    zIndex: 10,
     elevation: 10,
   },
   buttonshare: {
@@ -823,7 +841,7 @@ const styles = StyleSheet.create({
     right: 40,
     color: '#ffffff',
     fontSize: 30,
-    zIndex: 100,
+    zIndex: 10,
     elevation: 10,
   },
   buttonphone: {
@@ -832,7 +850,7 @@ const styles = StyleSheet.create({
     right: 40,
     color: '#ffffff',
     fontSize: 22,
-    zIndex: 100,
+    zIndex: 10,
     elevation: 10,
   },
   buttonmsg: {
@@ -841,7 +859,7 @@ const styles = StyleSheet.create({
     right: 40,
     color: '#ffffff',
     fontSize: 30,
-    zIndex: 100,
+    zIndex: 10,
     elevation: 10,
   },
   count: {
@@ -850,7 +868,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     top: '65.5%',
     fontWeight: '900',
-    zIndex: 100,
+    zIndex: 10,
     elevation: 10,
   },
   trending1: {

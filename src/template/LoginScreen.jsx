@@ -73,7 +73,7 @@ const LoginScreen = () => {
             industry,
             videos[0] ? videos[0].videoId : null,
           );
-          navigation.navigate('home1');
+          navigation.navigate('HomeScreen');
         } else if (jobOption === 'Employer' || jobOption === 'Investor') {
           // Save the user data without videoId if not available
           await saveStorage(userId, firstName, jobOption, industry);
@@ -189,7 +189,7 @@ const LoginScreen = () => {
                 jobOption === 'Entrepreneur'
               ) {
                 console.log('Navigating to home1...');
-                navigation.navigate('home1', {
+                navigation.navigate('HomeScreen', {
                   firstName,
                   email,
                   jobOption,
@@ -251,10 +251,6 @@ const LoginScreen = () => {
         await AsyncStorage.setItem('userId', JSON.stringify(userId));
         await AsyncStorage.setItem('firstName', firstName);
 
-        console.log('====================================');
-        console.log('Existing user details:', {userId, firstName, jobOption});
-        console.log('====================================');
-
         // Close the role selection modal
         setShowRoleSelection(false);
 
@@ -269,7 +265,7 @@ const LoginScreen = () => {
           });
         } else if (jobOption === 'Employee' || jobOption === 'Entrepreneur') {
           console.log('Navigating to home1...');
-          navigation.navigate('home1', {
+          navigation.navigate('HomeScreen', {
             firstName: given_name,
             email,
             jobOption,
@@ -321,7 +317,7 @@ const LoginScreen = () => {
             });
           } else if (role === 'Employee' || role === 'Entrepreneur') {
             console.log('Navigating to home1...');
-            navigation.navigate('home1', {
+            navigation.navigate('HomeScreen', {
               firstName: given_name,
               email,
               jobOption: role,

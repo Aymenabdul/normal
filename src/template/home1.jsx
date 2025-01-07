@@ -43,9 +43,6 @@ const Home1 = () => {
   useEffect(() => {
     const filter = new Filter(); // Initialize the bad-words filter
     const fetchTranscription = async () => {
-      console.log('====================================');
-      console.log('Fetching transcription for userId:', userId);
-      console.log('====================================');
       try {
         const response = await axios.get(
           `${env.baseURL}/api/videos/${userId}/transcription`,
@@ -66,11 +63,9 @@ const Home1 = () => {
             setIsVideoVisible(true); // Show the video if no profanity is detected
           }
         } else {
-          alert('No transcription available for this user.');
         }
       } catch (error) {
         console.error('Error fetching transcription:', error.message);
-        alert('Failed to fetch transcription.');
       }
     };
 
@@ -101,13 +96,13 @@ const Home1 = () => {
     const backAction = () => {
       if (isFocus) {
         // Optional: Show a confirmation alert before exiting the app
-        Alert.alert('Exit App', 'Do you want to exit the app?', [
+        Alert.alert('Exit App', 'Do you want to go Back?', [
           {
             text: 'Cancel',
             onPress: () => null,
             style: 'cancel',
           },
-          {text: 'Yes', onPress: () => BackHandler.exitApp()},
+          {text: 'Yes', onPress: () => navigation.navigate('HomeScreen')},
         ]);
 
         // Returning true indicates that we have handled the back press
@@ -205,9 +200,6 @@ const Home1 = () => {
       if (!response.ok) {
         throw new Error('Failed to fetch video');
       }
-      console.log('====================================');
-      console.log(response);
-      console.log('====================================');
       const videoUril = `${env.baseURL}/api/videos/user/${userId}`;
       setVideoUri(videoUril);
       setHasVideo(true); // Set to true if video is available
@@ -391,21 +383,24 @@ const Home1 = () => {
       <ImageBackground
         source={require('./assets/login.jpg')}
         style={styles.imageBackground}>
-        <View style={styles.centerContent}>
+        <View
+          style={{marginTop:'20%'}}></View>
+        <View style={{height:'100%',width:'100%', justifyContent: 'center',alignItems:'center'}}>
           {loading ? (
             <ActivityIndicator size="large" color="#000" />
           ) : videoUri && isVideoVisible ? (
             // Show the video if it's visible
             <TouchableOpacity
               onPress={() => setModalVisible(true)}
-              style={{marginTop: '5%'}}>
+              style={{height:'80%',width:'100%', justifyContent: 'center',alignItems:'center'}}>
               <Video
                 source={{uri: videoUri}}
                 style={styles.videoPlayer}
-                resizeMode="cover"
+                resizeMode="contain"
                 controls={true}
                 onProgress={e => setCurrentTime(e.currentTime)} // Track current time
               />
+              <Text style={styles.subtitle}>{currentSubtitle}</Text>
             </TouchableOpacity>
           ) : !hasVideo ? (
             // Show a message if there is no video to upload
@@ -451,7 +446,6 @@ const Home1 = () => {
               </TouchableOpacity>
             </View>
           )}
-          <Text style={styles.subtitle}>{currentSubtitle}</Text>
         </View>
       </ImageBackground>
     </View>
@@ -460,31 +454,26 @@ const Home1 = () => {
 
 const styles = StyleSheet.create({
   imageBackground: {
-    flex: 13,
+    flex: 15,
+    justifyContent: 'center',alignItems:'center',width:'100%',height:'100%',
   },
   container: {
     flex: 1,
-    resizeMode: 'contain',
+    // resizeMode: 'contain',
   },
   videoList: {
-    paddingLeft: 10,
-    paddingTop: 10,
+    // paddingLeft: 10,
+    // paddingTop: 10,
   },
   videoItem: {
     flex: 1,
-    marginBottom: 20,
-    marginRight: 10,
-  },
-  videoName: {
-    textAlign: 'center',
-    fontWeight: 'bold',
-    marginTop: 10,
+    marginTop:'10%',
   },
   videoPlayer: {
-    marginLeft: 10,
-    marginRight: 10,
-    height: 600,
+    height:'110%',
     borderRadius: 10,
+    width:'90%',
+    marginTop:'10%',
   },
   transcriptionButton: {
     marginTop: -15,
@@ -500,7 +489,7 @@ const styles = StyleSheet.create({
   },
   plusButton: {
     position: 'absolute',
-    top: 680,
+    top: '80%',
     right: '10%',
     backgroundColor: '#2e80d8',
     height: 60,
@@ -571,10 +560,6 @@ const styles = StyleSheet.create({
   updateButtonText: {
     color: '#fff',
   },
-  centerContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
   btnctnr: {
     flex: 1,
     justifyContent: 'space-evenly',
@@ -602,25 +587,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 30,
-    marginBottom: 20,
+    height:'20%',
   },
   noVideoText: {
     justifyContent: 'center',
     alignItems: 'center',
     fontSize: 18,
     fontWeight: '600',
-    marginLeft: '10%',
+    // marginLeft: '10%',
     color: '#ffffff',
   },
   subtitle: {
-    position: 'relative',
     bottom: '30%',
     color: 'white',
     fontSize:22,
     padding: 5,
     textAlign: 'center',
     zIndex:10,
+    width:'70%',
   },
   buttoncls: {
     color: '#ffffff',
