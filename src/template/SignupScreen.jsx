@@ -215,6 +215,18 @@ const SignupScreen = () => {
       return;
     }
 
+    // Check for public domain email if jobOption is "employer"
+    if (jobOption === 'Employer') {
+      const isPublicEmail = await checkIfPublicEmail(email);
+      if (isPublicEmail) {
+        Alert.alert(
+          'Validation Error',
+          'Employers must use a company email, not a public domain email!',
+        );
+        return;
+      }
+    }
+
     // Check if phone number is already taken
     const phoneExists = await checkIfPhoneExists(phoneNumber);
     if (phoneExists) {
@@ -237,18 +249,12 @@ const SignupScreen = () => {
       currentEmployer,
       languages: languagesKnown,
     };
-    
     setLoading(true);
-    
     try {
-      const response = await axios.post(
-        `${env.baseURL}/users`,
-        userData,
-        {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 10000,
-        }
-      );
+      const response = await axios.post(`${env.baseURL}/users`, userData, {
+        headers: {'Content-Type': 'application/json'},
+        timeout: 10000,
+      });
       console.log('User created:', response.data);
       Alert.alert(
         'Success',
@@ -276,22 +282,22 @@ const SignupScreen = () => {
               setLanguagesKnown('');
             },
           },
-        ]
+        ],
       );
     } catch (error) {
       console.error(
         'Signup failed:',
-        error.response ? error.response.data : error.message
+        error.response ? error.response.data : error.message,
       );
     } finally {
       setLoading(false);
     }
   };
-  const checkIfEmailExists = async email => {
+  const checkIfEmailExists = async () => {
     console.log('Checking email:', email); // Log the email you're checking
     try {
       const response = await axios.post(
-        `${env.baseURL}/userscheck-email`,
+        `${env.baseURL}/users/check-email`,
         {email}, // Wrapping email in an object
         {headers: {'Content-Type': 'application/json'}},
       );
@@ -303,11 +309,31 @@ const SignupScreen = () => {
     }
   };
 
-  const checkIfPhoneExists = async phoneNumber => {
+  const checkIfPublicEmail = async () => {
+    try {
+      const response = await axios.post(
+        `${env.baseURL}/users/check-Recruteremail`,
+        {email},
+        {headers: {'Content-Type': 'application/json'}},
+      );
+      console.log('Response from public email check:', response.data);
+
+      // Check if the backend returned an error indicating a public domain email
+      if (response.data.error === 'Public email domains are not allowed') {
+        return true; // Email is from a public domain
+      }
+      return false; // Email is valid
+    } catch (error) {
+      console.error('Error checking public email:', error);
+      return false; // Default to valid email if there's an error
+    }
+  };
+
+  const checkIfPhoneExists = async () => {
     console.log('Checking phoneNumber:', phoneNumber);
     try {
       const response = await axios.post(
-        `${env.baseURL}/userscheck-phone`,
+        `${env.baseURL}/users/check-phone`,
         phoneNumber,
         {
           headers: {'Content-Type': 'application/json'},
@@ -397,225 +423,130 @@ const SignupScreen = () => {
             style={styles.picker}
             onValueChange={itemValue => setJobOption(itemValue)}>
             <Picker.Item
-              style={{fontSize:16}}
+              style={{fontSize: 16}}
               label="  Select your role"
               value=""
             />
             <Picker.Item
-              style={{fontSize:16}}
+              style={{fontSize: 16}}
               label="  Employer"
               value="Employer"
             />
             <Picker.Item
-              style={{fontSize:16}}
+              style={{fontSize: 16}}
               label="  Freelancer"
               value="Freelancer"
             />
             <Picker.Item
-              style={{fontSize:16}}
+              style={{fontSize: 16}}
               label="  Employee"
               value="Employee"
             />
             <Picker.Item
-              style={{fontSize:16}}
+              style={{fontSize: 16}}
               label="  Entrepreneur"
               value="Entrepreneur"
             />
             <Picker.Item
-              style={{fontSize:16}}
+              style={{fontSize: 16}}
               label="  Investor"
               value="Investor"
             />
           </Picker>
           {/* Role-specific fields */}
-          {(jobOption === 'Employee') && (
-        <>
-        <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#000"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            placeholderTextColor="#000"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Organization Name"
-            placeholderTextColor="#000"
-            value={currentEmployer}
-            onChangeText={setCurrentEmployer}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Current Role"
-            placeholderTextColor="#000"
-            value={currentRole}
-            onChangeText={setCurrentRole}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Key Skills"
-            placeholderTextColor="#000"
-            value={keySkills}
-            onChangeText={setKeySkills}
-          />
-          <Picker
-            selectedValue={experience}
-            onValueChange={itemValue => setExperience(itemValue)}
-            style={styles.picker}>
-            <Picker.Item label="  Select Experience" value="" />
-            {experienceOptions.map(option => (
-              <Picker.Item
-                label={option.label}
-                value={option.value}
-                key={option.value}
-              />
-              
-            ))}
-          </Picker>
-          <TouchableOpacity
-            onPress={toggleIndustryDropdown}
-            style={styles.dropdownButton}>
-            <Text style={styles.dropdownButtonText}>
-              {industry || 'Select Industry'}
-            </Text>
-            <UploadImage name='menu-down' size={20}/>
-          </TouchableOpacity>
-
-          {/* Industry Dropdown Content */}
-          {isIndustryDropdownOpen && (
-            <View style={[styles.dropdownContainer, {maxHeight: 200}]}>
-              {/* Search Input */}
+          {jobOption === 'Employee' && (
+            <>
               <TextInput
-                style={styles.searchInput}
-                placeholder="Search industry"
-                placeholderTextColor="#666"
-                value={industrySearchText}
-                onChangeText={setIndustrySearchText}
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor="#000"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
               />
-
-              {/* Scrollable List of Filtered Industries */}
-              <ScrollView style={styles.scrollView} nestedScrollEnabled={true}>
-                {filteredIndustries.length > 0 ? (
-                  filteredIndustries
-                    .sort((a, b) => a.localeCompare(b))
-                    .map(industryName => (
-                      <TouchableOpacity
-                        key={industryName}
-                        onPress={() => selectIndustry(industryName)}
-                        style={styles.dropdownOption}>
-                        <Text style={styles.dropdownOptionText}>
-                          {industryName}
-                        </Text>
-                      </TouchableOpacity>
-                    ))
-                ) : (
-                  <TouchableOpacity
-                    onPress={() => selectIndustry('Others')}
-                    style={styles.dropdownOption}>
-                    <Text style={styles.dropdownOptionText}>Others</Text>
-                  </TouchableOpacity>
-                )}
-              </ScrollView>
-            </View>
-          )}
-
-          <TouchableOpacity
-            onPress={toggleDropdown}
-            style={styles.dropdownButton}>
-            <Text style={styles.dropdownButtonText}>
-              {city || 'Select City'}
-            </Text>
-            <UploadImage name='menu-down' size={20}/>
-          </TouchableOpacity>
-
-          {/* Dropdown Content */}
-          {isDropdownOpen && (
-            <View style={styles.dropdownContainer}>
-              {/* Search Input */}
               <TextInput
-                style={styles.searchInput}
-                placeholder="Search city"
-                placeholderTextColor="#666"
-                value={searchText}
-                onChangeText={setSearchText}
+                style={styles.input}
+                placeholder="Confirm Password"
+                placeholderTextColor="#000"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
               />
-
-              {/* Scrollable List of Filtered Cities */}
-              <ScrollView style={styles.scrollView} nestedScrollEnabled={true}>
-                {filteredCities.length > 0 ? (
-                  // Display filtered cities in alphabetical order
-                  filteredCities
-                    .sort((a, b) => a.localeCompare(b))
-                    .map(cityName => (
-                      <TouchableOpacity
-                        key={cityName}
-                        onPress={() => selectCity(cityName)}
-                        style={styles.dropdownOption}>
-                        <Text style={styles.dropdownOptionText}>
-                          {cityName}
-                        </Text>
-                      </TouchableOpacity>
-                    ))
-                ) : (
-                  <>
-                    {/* "Others" option */}
-                    <TouchableOpacity
-                      onPress={() => selectCity('Others')}
-                      style={styles.dropdownOption}>
-                      <Text style={styles.dropdownOptionText}>Others</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </ScrollView>
-            </View>
-          )}
-          {/* Language Dropdown */}
-          {languages.map((language, index) => (
-            <View key={index} style={styles.languageInputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Organization Name"
+                placeholderTextColor="#000"
+                value={currentEmployer}
+                onChangeText={setCurrentEmployer}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Current Role"
+                placeholderTextColor="#000"
+                value={currentRole}
+                onChangeText={setCurrentRole}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Key Skills"
+                placeholderTextColor="#000"
+                value={keySkills}
+                onChangeText={setKeySkills}
+              />
+              <Picker
+                selectedValue={experience}
+                onValueChange={itemValue => setExperience(itemValue)}
+                style={styles.picker}>
+                <Picker.Item label="  Select Experience" value="" />
+                {experienceOptions.map(option => (
+                  <Picker.Item
+                    label={option.label}
+                    value={option.value}
+                    key={option.value}
+                  />
+                ))}
+              </Picker>
               <TouchableOpacity
-                onPress={() => handleLanguageChange2(language, index)}
+                onPress={toggleIndustryDropdown}
                 style={styles.dropdownButton}>
                 <Text style={styles.dropdownButtonText}>
-                  {language || 'Select Language'}
+                  {industry || 'Select Industry'}
                 </Text>
-                <UploadImage name='menu-down' size={20}/>
+                <UploadImage name="menu-down" size={20} />
               </TouchableOpacity>
 
-              {isLanguageDropdownOpen && focusedIndex === index && (
-                <View style={styles.dropdownContainer}>
+              {/* Industry Dropdown Content */}
+              {isIndustryDropdownOpen && (
+                <View style={[styles.dropdownContainer, {maxHeight: 200}]}>
+                  {/* Search Input */}
                   <TextInput
                     style={styles.searchInput}
-                    placeholder="Search language"
+                    placeholder="Search industry"
                     placeholderTextColor="#666"
-                    value={languageSearchText}
-                    onChangeText={setLanguageSearchText}
+                    value={industrySearchText}
+                    onChangeText={setIndustrySearchText}
                   />
+
+                  {/* Scrollable List of Filtered Industries */}
                   <ScrollView
                     style={styles.scrollView}
                     nestedScrollEnabled={true}>
-                    {filteredLanguages.length > 0 ? (
-                      filteredLanguages.map(language => (
-                        <TouchableOpacity
-                          key={language}
-                          onPress={() => selectLanguage(language)}
-                          style={styles.dropdownOption}>
-                          <Text style={styles.dropdownOptionText}>
-                            {language}
-                          </Text>
-                        </TouchableOpacity>
-                      ))
+                    {filteredIndustries.length > 0 ? (
+                      filteredIndustries
+                        .sort((a, b) => a.localeCompare(b))
+                        .map(industryName => (
+                          <TouchableOpacity
+                            key={industryName}
+                            onPress={() => selectIndustry(industryName)}
+                            style={styles.dropdownOption}>
+                            <Text style={styles.dropdownOptionText}>
+                              {industryName}
+                            </Text>
+                          </TouchableOpacity>
+                        ))
                     ) : (
                       <TouchableOpacity
-                        onPress={() => selectLanguage('Others')}
+                        onPress={() => selectIndustry('Others')}
                         style={styles.dropdownOption}>
                         <Text style={styles.dropdownOptionText}>Others</Text>
                       </TouchableOpacity>
@@ -624,368 +555,478 @@ const SignupScreen = () => {
                 </View>
               )}
 
-              {/* Remove button for each language field */}
-              {languages.length > 1 && (
+              <TouchableOpacity
+                onPress={toggleDropdown}
+                style={styles.dropdownButton}>
+                <Text style={styles.dropdownButtonText}>
+                  {city || 'Select City'}
+                </Text>
+                <UploadImage name="menu-down" size={20} />
+              </TouchableOpacity>
+
+              {/* Dropdown Content */}
+              {isDropdownOpen && (
+                <View style={styles.dropdownContainer}>
+                  {/* Search Input */}
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search city"
+                    placeholderTextColor="#666"
+                    value={searchText}
+                    onChangeText={setSearchText}
+                  />
+
+                  {/* Scrollable List of Filtered Cities */}
+                  <ScrollView
+                    style={styles.scrollView}
+                    nestedScrollEnabled={true}>
+                    {filteredCities.length > 0 ? (
+                      // Display filtered cities in alphabetical order
+                      filteredCities
+                        .sort((a, b) => a.localeCompare(b))
+                        .map(cityName => (
+                          <TouchableOpacity
+                            key={cityName}
+                            onPress={() => selectCity(cityName)}
+                            style={styles.dropdownOption}>
+                            <Text style={styles.dropdownOptionText}>
+                              {cityName}
+                            </Text>
+                          </TouchableOpacity>
+                        ))
+                    ) : (
+                      <>
+                        {/* "Others" option */}
+                        <TouchableOpacity
+                          onPress={() => selectCity('Others')}
+                          style={styles.dropdownOption}>
+                          <Text style={styles.dropdownOptionText}>Others</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </ScrollView>
+                </View>
+              )}
+              {/* Language Dropdown */}
+              {languages.map((language, index) => (
+                <View key={index} style={styles.languageInputContainer}>
+                  <TouchableOpacity
+                    onPress={() => handleLanguageChange2(language, index)}
+                    style={styles.dropdownButton}>
+                    <Text style={styles.dropdownButtonText}>
+                      {language || 'Select Language'}
+                    </Text>
+                    <UploadImage name="menu-down" size={20} />
+                  </TouchableOpacity>
+
+                  {isLanguageDropdownOpen && focusedIndex === index && (
+                    <View style={styles.dropdownContainer}>
+                      <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search language"
+                        placeholderTextColor="#666"
+                        value={languageSearchText}
+                        onChangeText={setLanguageSearchText}
+                      />
+                      <ScrollView
+                        style={styles.scrollView}
+                        nestedScrollEnabled={true}>
+                        {filteredLanguages.length > 0 ? (
+                          filteredLanguages.map(language => (
+                            <TouchableOpacity
+                              key={language}
+                              onPress={() => selectLanguage(language)}
+                              style={styles.dropdownOption}>
+                              <Text style={styles.dropdownOptionText}>
+                                {language}
+                              </Text>
+                            </TouchableOpacity>
+                          ))
+                        ) : (
+                          <TouchableOpacity
+                            onPress={() => selectLanguage('Others')}
+                            style={styles.dropdownOption}>
+                            <Text style={styles.dropdownOptionText}>
+                              Others
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  {/* Remove button for each language field */}
+                  {languages.length > 1 && (
+                    <TouchableOpacity
+                      onPress={() => removeLanguageField(index)}
+                      style={styles.removeButton}>
+                      <Text style={styles.removeButtonText}>X</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+
+              {/* Add Language Field Button */}
+              {languages.length < 3 && (
                 <TouchableOpacity
-                  onPress={() => removeLanguageField(index)}
-                  style={styles.removeButton}>
-                  <Text style={styles.removeButtonText}>X</Text>
+                  onPress={() => setLanguages([...languages, ''])}
+                  style={styles.addButton}>
+                  <Text style={styles.addButtonText}>Add Language</Text>
                 </TouchableOpacity>
               )}
-            </View>
-          ))}
-
-          {/* Add Language Field Button */}
-          {languages.length < 3 && (
-            <TouchableOpacity
-              onPress={() => setLanguages([...languages, ''])}
-              style={styles.addButton}>
-              <Text style={styles.addButtonText}>Add Language</Text>
-            </TouchableOpacity>
+            </>
           )}
-        </>
-      )}
-      {(jobOption === 'Entrepreneur') && (
-        <>
-        <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#000"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            placeholderTextColor="#000"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Organization Name"
-            placeholderTextColor="#000"
-            value={currentEmployer}
-            onChangeText={setCurrentEmployer}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Current Role"
-            placeholderTextColor="#000"
-            value={currentRole}
-            onChangeText={setCurrentRole}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Key Skills"
-            placeholderTextColor="#000"
-            value={keySkills}
-            onChangeText={setKeySkills}
-          />
-          <TouchableOpacity
-            onPress={toggleIndustryDropdown}
-            style={styles.dropdownButton}>
-            <Text style={styles.dropdownButtonText}>
-              {industry || 'Select Industry'}
-            </Text>
-            <UploadImage name='menu-down' size={20}/>
-          </TouchableOpacity>
-
-          {/* Industry Dropdown Content */}
-          {isIndustryDropdownOpen && (
-            <View style={[styles.dropdownContainer, {maxHeight: 200}]}>
-              {/* Search Input */}
+          {jobOption === 'Entrepreneur' && (
+            <>
               <TextInput
-                style={styles.searchInput}
-                placeholder="Search industry"
-                placeholderTextColor="#666"
-                value={industrySearchText}
-                onChangeText={setIndustrySearchText}
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor="#000"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
               />
-
-              {/* Scrollable List of Filtered Industries */}
-              <ScrollView style={styles.scrollView} nestedScrollEnabled={true}>
-                {filteredIndustries.length > 0 ? (
-                  filteredIndustries
-                    .sort((a, b) => a.localeCompare(b))
-                    .map(industryName => (
-                      <TouchableOpacity
-                        key={industryName}
-                        onPress={() => selectIndustry(industryName)}
-                        style={styles.dropdownOption}>
-                        <Text style={styles.dropdownOptionText}>
-                          {industryName}
-                        </Text>
-                      </TouchableOpacity>
-                    ))
-                ) : (
-                  <TouchableOpacity
-                    onPress={() => selectIndustry('Others')}
-                    style={styles.dropdownOption}>
-                    <Text style={styles.dropdownOptionText}>Others</Text>
-                  </TouchableOpacity>
-                )}
-              </ScrollView>
-            </View>
-          )}
-
-          <TouchableOpacity
-            onPress={toggleDropdown}
-            style={styles.dropdownButton}>
-            <Text style={styles.dropdownButtonText}>
-              {city || 'Select City'}
-            </Text>
-            <UploadImage name='menu-down' size={20}/>
-          </TouchableOpacity>
-
-          {/* Dropdown Content */}
-          {isDropdownOpen && (
-            <View style={styles.dropdownContainer}>
-              {/* Search Input */}
               <TextInput
-                style={styles.searchInput}
-                placeholder="Search city"
-                placeholderTextColor="#666"
-                value={searchText}
-                onChangeText={setSearchText}
+                style={styles.input}
+                placeholder="Confirm Password"
+                placeholderTextColor="#000"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
               />
-
-              {/* Scrollable List of Filtered Cities */}
-              <ScrollView style={styles.scrollView} nestedScrollEnabled={true}>
-                {filteredCities.length > 0 ? (
-                  // Display filtered cities in alphabetical order
-                  filteredCities
-                    .sort((a, b) => a.localeCompare(b))
-                    .map(cityName => (
-                      <TouchableOpacity
-                        key={cityName}
-                        onPress={() => selectCity(cityName)}
-                        style={styles.dropdownOption}>
-                        <Text style={styles.dropdownOptionText}>
-                          {cityName}
-                        </Text>
-                      </TouchableOpacity>
-                    ))
-                ) : (
-                  <>
-                    {/* "Others" option */}
-                    <TouchableOpacity
-                      onPress={() => selectCity('Others')}
-                      style={styles.dropdownOption}>
-                      <Text style={styles.dropdownOptionText}>Others</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </ScrollView>
-            </View>
-          )}
-        </>
-      )}
-      {/* Role-specific fields */}
-      {jobOption === 'Employer' && (
-        <>
-        <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#000"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            placeholderTextColor="#000"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Organization Name"
-            placeholderTextColor="#000"
-            value={currentEmployer}
-            onChangeText={setCurrentEmployer}
-          />
-          <TouchableOpacity
-            onPress={toggleIndustryDropdown}
-            style={styles.dropdownButton}>
-            <Text style={styles.dropdownButtonText}>
-              {industry || 'Select Industry'}
-            </Text>
-            <UploadImage name='menu-down' size={20}/>
-          </TouchableOpacity>
-
-          {/* Industry Dropdown Content */}
-          {isIndustryDropdownOpen && (
-            <View style={[styles.dropdownContainer, {maxHeight: 200}]}>
-              {/* Search Input */}
               <TextInput
-                style={styles.searchInput}
-                placeholder="Search industry"
-                placeholderTextColor="#666"
-                value={industrySearchText}
-                onChangeText={setIndustrySearchText}
+                style={styles.input}
+                placeholder="Organization Name"
+                placeholderTextColor="#000"
+                value={currentEmployer}
+                onChangeText={setCurrentEmployer}
               />
-
-              {/* Scrollable List of Filtered Industries */}
-              <ScrollView style={styles.scrollView} nestedScrollEnabled={true}>
-                {filteredIndustries.length > 0 ? (
-                  filteredIndustries
-                    .sort((a, b) => a.localeCompare(b))
-                    .map(industryName => (
-                      <TouchableOpacity
-                        key={industryName}
-                        onPress={() => selectIndustry(industryName)}
-                        style={styles.dropdownOption}>
-                        <Text style={styles.dropdownOptionText}>
-                          {industryName}
-                        </Text>
-                      </TouchableOpacity>
-                    ))
-                ) : (
-                  <TouchableOpacity
-                    onPress={() => selectIndustry('Others')}
-                    style={styles.dropdownOption}>
-                    <Text style={styles.dropdownOptionText}>Others</Text>
-                  </TouchableOpacity>
-                )}
-              </ScrollView>
-            </View>
-          )}
-
-          <TouchableOpacity
-            onPress={toggleDropdown}
-            style={styles.dropdownButton}>
-            <Text style={styles.dropdownButtonText}>
-              {city || 'Select City'}
-            </Text>
-            <UploadImage name='menu-down' size={20}/>
-          </TouchableOpacity>
-
-          {/* Dropdown Content */}
-          {isDropdownOpen && (
-            <View style={styles.dropdownContainer}>
-              {/* Search Input */}
               <TextInput
-                style={styles.searchInput}
-                placeholder="Search city"
-                placeholderTextColor="#666"
-                value={searchText}
-                onChangeText={setSearchText}
+                style={styles.input}
+                placeholder="Current Role"
+                placeholderTextColor="#000"
+                value={currentRole}
+                onChangeText={setCurrentRole}
               />
-
-              {/* Scrollable List of Filtered Cities */}
-              <ScrollView style={styles.scrollView} nestedScrollEnabled={true}>
-                {filteredCities.length > 0 ? (
-                  // Display filtered cities in alphabetical order
-                  filteredCities
-                    .sort((a, b) => a.localeCompare(b))
-                    .map(cityName => (
-                      <TouchableOpacity
-                        key={cityName}
-                        onPress={() => selectCity(cityName)}
-                        style={styles.dropdownOption}>
-                        <Text style={styles.dropdownOptionText}>
-                          {cityName}
-                        </Text>
-                      </TouchableOpacity>
-                    ))
-                ) : (
-                  <>
-                    {/* "Others" option */}
-                    <TouchableOpacity
-                      onPress={() => selectCity('Others')}
-                      style={styles.dropdownOption}>
-                      <Text style={styles.dropdownOptionText}>Others</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </ScrollView>
-            </View>
-          )}
-        </>
-      )}
-      {/* Role-specific fields */}
-      {jobOption === 'Investor' && (
-        <>
-        <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#000"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            placeholderTextColor="#000"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Organization Name"
-            placeholderTextColor="#000"
-            value={currentEmployer}
-            onChangeText={setCurrentEmployer}
-          />
-          <TouchableOpacity
-            onPress={toggleDropdown}
-            style={styles.dropdownButton}>
-            <Text style={styles.dropdownButtonText}>
-              {city || 'Select City'}
-            </Text>
-            <UploadImage name='menu-down' size={20}/>
-          </TouchableOpacity>
-
-          {/* Dropdown Content */}
-          {isDropdownOpen && (
-            <View style={styles.dropdownContainer}>
-              {/* Search Input */}
               <TextInput
-                style={styles.searchInput}
-                placeholder="Search city"
-                placeholderTextColor="#666"
-                value={searchText}
-                onChangeText={setSearchText}
+                style={styles.input}
+                placeholder="Key Skills"
+                placeholderTextColor="#000"
+                value={keySkills}
+                onChangeText={setKeySkills}
               />
+              <TouchableOpacity
+                onPress={toggleIndustryDropdown}
+                style={styles.dropdownButton}>
+                <Text style={styles.dropdownButtonText}>
+                  {industry || 'Select Industry'}
+                </Text>
+                <UploadImage name="menu-down" size={20} />
+              </TouchableOpacity>
 
-              {/* Scrollable List of Filtered Cities */}
-              <ScrollView style={styles.scrollView} nestedScrollEnabled={true}>
-                {filteredCities.length > 0 ? (
-                  // Display filtered cities in alphabetical order
-                  filteredCities
-                    .sort((a, b) => a.localeCompare(b))
-                    .map(cityName => (
+              {/* Industry Dropdown Content */}
+              {isIndustryDropdownOpen && (
+                <View style={[styles.dropdownContainer, {maxHeight: 200}]}>
+                  {/* Search Input */}
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search industry"
+                    placeholderTextColor="#666"
+                    value={industrySearchText}
+                    onChangeText={setIndustrySearchText}
+                  />
+
+                  {/* Scrollable List of Filtered Industries */}
+                  <ScrollView
+                    style={styles.scrollView}
+                    nestedScrollEnabled={true}>
+                    {filteredIndustries.length > 0 ? (
+                      filteredIndustries
+                        .sort((a, b) => a.localeCompare(b))
+                        .map(industryName => (
+                          <TouchableOpacity
+                            key={industryName}
+                            onPress={() => selectIndustry(industryName)}
+                            style={styles.dropdownOption}>
+                            <Text style={styles.dropdownOptionText}>
+                              {industryName}
+                            </Text>
+                          </TouchableOpacity>
+                        ))
+                    ) : (
                       <TouchableOpacity
-                        key={cityName}
-                        onPress={() => selectCity(cityName)}
+                        onPress={() => selectIndustry('Others')}
                         style={styles.dropdownOption}>
-                        <Text style={styles.dropdownOptionText}>
-                          {cityName}
-                        </Text>
+                        <Text style={styles.dropdownOptionText}>Others</Text>
                       </TouchableOpacity>
-                    ))
-                ) : (
-                  <>
-                    {/* "Others" option */}
-                    <TouchableOpacity
-                      onPress={() => selectCity('Others')}
-                      style={styles.dropdownOption}>
-                      <Text style={styles.dropdownOptionText}>Others</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </ScrollView>
-            </View>
+                    )}
+                  </ScrollView>
+                </View>
+              )}
+
+              <TouchableOpacity
+                onPress={toggleDropdown}
+                style={styles.dropdownButton}>
+                <Text style={styles.dropdownButtonText}>
+                  {city || 'Select City'}
+                </Text>
+                <UploadImage name="menu-down" size={20} />
+              </TouchableOpacity>
+
+              {/* Dropdown Content */}
+              {isDropdownOpen && (
+                <View style={styles.dropdownContainer}>
+                  {/* Search Input */}
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search city"
+                    placeholderTextColor="#666"
+                    value={searchText}
+                    onChangeText={setSearchText}
+                  />
+
+                  {/* Scrollable List of Filtered Cities */}
+                  <ScrollView
+                    style={styles.scrollView}
+                    nestedScrollEnabled={true}>
+                    {filteredCities.length > 0 ? (
+                      // Display filtered cities in alphabetical order
+                      filteredCities
+                        .sort((a, b) => a.localeCompare(b))
+                        .map(cityName => (
+                          <TouchableOpacity
+                            key={cityName}
+                            onPress={() => selectCity(cityName)}
+                            style={styles.dropdownOption}>
+                            <Text style={styles.dropdownOptionText}>
+                              {cityName}
+                            </Text>
+                          </TouchableOpacity>
+                        ))
+                    ) : (
+                      <>
+                        {/* "Others" option */}
+                        <TouchableOpacity
+                          onPress={() => selectCity('Others')}
+                          style={styles.dropdownOption}>
+                          <Text style={styles.dropdownOptionText}>Others</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </ScrollView>
+                </View>
+              )}
+            </>
           )}
-        </>
-      )}
+          {/* Role-specific fields */}
+          {jobOption === 'Employer' && (
+            <>
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor="#000"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm Password"
+                placeholderTextColor="#000"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Organization Name"
+                placeholderTextColor="#000"
+                value={currentEmployer}
+                onChangeText={setCurrentEmployer}
+              />
+              <TouchableOpacity
+                onPress={toggleIndustryDropdown}
+                style={styles.dropdownButton}>
+                <Text style={styles.dropdownButtonText}>
+                  {industry || 'Select Industry'}
+                </Text>
+                <UploadImage name="menu-down" size={20} />
+              </TouchableOpacity>
+
+              {/* Industry Dropdown Content */}
+              {isIndustryDropdownOpen && (
+                <View style={[styles.dropdownContainer, {maxHeight: 200}]}>
+                  {/* Search Input */}
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search industry"
+                    placeholderTextColor="#666"
+                    value={industrySearchText}
+                    onChangeText={setIndustrySearchText}
+                  />
+
+                  {/* Scrollable List of Filtered Industries */}
+                  <ScrollView
+                    style={styles.scrollView}
+                    nestedScrollEnabled={true}>
+                    {filteredIndustries.length > 0 ? (
+                      filteredIndustries
+                        .sort((a, b) => a.localeCompare(b))
+                        .map(industryName => (
+                          <TouchableOpacity
+                            key={industryName}
+                            onPress={() => selectIndustry(industryName)}
+                            style={styles.dropdownOption}>
+                            <Text style={styles.dropdownOptionText}>
+                              {industryName}
+                            </Text>
+                          </TouchableOpacity>
+                        ))
+                    ) : (
+                      <TouchableOpacity
+                        onPress={() => selectIndustry('Others')}
+                        style={styles.dropdownOption}>
+                        <Text style={styles.dropdownOptionText}>Others</Text>
+                      </TouchableOpacity>
+                    )}
+                  </ScrollView>
+                </View>
+              )}
+
+              <TouchableOpacity
+                onPress={toggleDropdown}
+                style={styles.dropdownButton}>
+                <Text style={styles.dropdownButtonText}>
+                  {city || 'Select City'}
+                </Text>
+                <UploadImage name="menu-down" size={20} />
+              </TouchableOpacity>
+
+              {/* Dropdown Content */}
+              {isDropdownOpen && (
+                <View style={styles.dropdownContainer}>
+                  {/* Search Input */}
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search city"
+                    placeholderTextColor="#666"
+                    value={searchText}
+                    onChangeText={setSearchText}
+                  />
+
+                  {/* Scrollable List of Filtered Cities */}
+                  <ScrollView
+                    style={styles.scrollView}
+                    nestedScrollEnabled={true}>
+                    {filteredCities.length > 0 ? (
+                      // Display filtered cities in alphabetical order
+                      filteredCities
+                        .sort((a, b) => a.localeCompare(b))
+                        .map(cityName => (
+                          <TouchableOpacity
+                            key={cityName}
+                            onPress={() => selectCity(cityName)}
+                            style={styles.dropdownOption}>
+                            <Text style={styles.dropdownOptionText}>
+                              {cityName}
+                            </Text>
+                          </TouchableOpacity>
+                        ))
+                    ) : (
+                      <>
+                        {/* "Others" option */}
+                        <TouchableOpacity
+                          onPress={() => selectCity('Others')}
+                          style={styles.dropdownOption}>
+                          <Text style={styles.dropdownOptionText}>Others</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </ScrollView>
+                </View>
+              )}
+            </>
+          )}
+          {/* Role-specific fields */}
+          {jobOption === 'Investor' && (
+            <>
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor="#000"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm Password"
+                placeholderTextColor="#000"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Organization Name"
+                placeholderTextColor="#000"
+                value={currentEmployer}
+                onChangeText={setCurrentEmployer}
+              />
+              <TouchableOpacity
+                onPress={toggleDropdown}
+                style={styles.dropdownButton}>
+                <Text style={styles.dropdownButtonText}>
+                  {city || 'Select City'}
+                </Text>
+                <UploadImage name="menu-down" size={20} />
+              </TouchableOpacity>
+
+              {/* Dropdown Content */}
+              {isDropdownOpen && (
+                <View style={styles.dropdownContainer}>
+                  {/* Search Input */}
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search city"
+                    placeholderTextColor="#666"
+                    value={searchText}
+                    onChangeText={setSearchText}
+                  />
+
+                  {/* Scrollable List of Filtered Cities */}
+                  <ScrollView
+                    style={styles.scrollView}
+                    nestedScrollEnabled={true}>
+                    {filteredCities.length > 0 ? (
+                      // Display filtered cities in alphabetical order
+                      filteredCities
+                        .sort((a, b) => a.localeCompare(b))
+                        .map(cityName => (
+                          <TouchableOpacity
+                            key={cityName}
+                            onPress={() => selectCity(cityName)}
+                            style={styles.dropdownOption}>
+                            <Text style={styles.dropdownOptionText}>
+                              {cityName}
+                            </Text>
+                          </TouchableOpacity>
+                        ))
+                    ) : (
+                      <>
+                        {/* "Others" option */}
+                        <TouchableOpacity
+                          onPress={() => selectCity('Others')}
+                          style={styles.dropdownOption}>
+                          <Text style={styles.dropdownOptionText}>Others</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </ScrollView>
+                </View>
+              )}
+            </>
+          )}
 
           {/* Profile Picture Upload Button */}
           <TouchableOpacity
@@ -1018,8 +1059,7 @@ const SignupScreen = () => {
         {/* Navigation to Login Screen */}
         <TouchableOpacity onPress={() => navigation.navigate('LoginScreen')}>
           <Text style={styles.logAccount}>
-            Already Have An Account?{' '}
-            <Text style={{color: 'blue'}}>Login</Text>
+            Already Have An Account? <Text style={{color: 'blue'}}>Login</Text>
           </Text>
         </TouchableOpacity>
       </LinearGradient>
@@ -1080,7 +1120,7 @@ const styles = StyleSheet.create({
     paddingLeft: 15,
     color: 'black',
     backgroundColor: '#ffffff',
-    fontSize:16,
+    fontSize: 16,
   },
   label: {
     fontSize: 16,
@@ -1094,7 +1134,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: 'black',
     backgroundColor: '#ffffff',
-    fontSize:18,
+    fontSize: 18,
   },
   loadingIndicator: {
     marginVertical: 20,
@@ -1148,8 +1188,8 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginVertical: 10,
     marginTop: -2,
-    flexDirection:'row',
-    justifyContent:'space-between',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   dropdownButtonText: {
     color: '#000',
@@ -1200,7 +1240,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#007BFF',
     padding: 5,
     borderRadius: 5,
-    width:20,
+    width: 20,
     marginTop: -3,
     marginBottom: 5,
     alignSelf: 'flex-end',

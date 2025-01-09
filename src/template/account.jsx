@@ -17,6 +17,8 @@ import Indus from 'react-native-vector-icons/FontAwesome';
 import Locat from 'react-native-vector-icons/FontAwesome';
 import Back from 'react-native-vector-icons/AntDesign';
 import Lang from 'react-native-vector-icons/FontAwesome';
+import Email from 'react-native-vector-icons/Entypo';
+import Phone from 'react-native-vector-icons/FontAwesome';
 import axios from 'axios';
 import {Buffer} from 'buffer';
 import env from './env';
@@ -38,10 +40,9 @@ const ProfileScreen = () => {
   const [jobOption,setJobOption] = useState('');
   const [currentRole,setCurrentRole] = useState('');
   const [videoId, setVideoId] = useState(null); // Example videoId (this should be dynamically assigned)
-
-  console.log('====================================');
-  console.log("skills",skills);
-  console.log('====================================');
+  const [lastName,setLastName] = useState('');
+  const [email,setEmail] = useState('');
+  const [phoneNumber,setPhoneNumber] = useState('');
 
   useEffect(() => {
     const Asyncstorage = async () => {
@@ -100,6 +101,7 @@ const ProfileScreen = () => {
 
         // Safely store user details in AsyncStorage
         await handleAsyncStorage('firstName', user.firstName);
+        await handleAsyncStorage('lastName',user.lastName);
         await handleAsyncStorage('industry', user.industry);
         await handleAsyncStorage('experience', user.experience);
         await handleAsyncStorage('city', user.city);
@@ -109,6 +111,8 @@ const ProfileScreen = () => {
         await handleAsyncStorage('organizationName',user.organizationName);
         await handleAsyncStorage('currentRole',user.currentRole);
         await handleAsyncStorage('KeySkills',user.keySkills);
+        await handleAsyncStorage('email',user.email);
+        await handleAsyncStorage('phoneNumber',user.phoneNumber);
 
 
         // Update state
@@ -122,6 +126,9 @@ const ProfileScreen = () => {
         setJobOption(user.jobOption || '');
         setOrganizationName(user.organizationName || '');
         setCurrentRole(user.currentRole || '');
+        setLastName(user.lastName || '');
+        setPhoneNumber(user.phoneNumber);
+        setEmail(user.email);
 
         console.log('User Data:', {
           firstName: user.firstName,
@@ -210,7 +217,7 @@ const ProfileScreen = () => {
         {/* Header with Profile Picture */}
         <View style={styles.header}>
           <Image source={{uri: profileImage}} style={styles.profileImage} />
-          <Text style={styles.profileName}>{firstName}</Text>
+          <Text style={styles.profileName}>{firstName} {lastName}</Text>
           <Text style={styles.jobTitle}>{industry}</Text>
         </View>
 
@@ -229,6 +236,18 @@ const ProfileScreen = () => {
           style={{width: '100%'}}
           showsVerticalScrollIndicator={false}>
           {/* Skills Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              <Email name={'email'} size={20} /> Email
+            </Text>
+            <Text style={styles.sectionContent}>{email}</Text>
+          </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              <Phone name={'mobile-phone'} size={20} /> PhoneNumber
+            </Text>
+            <Text style={styles.sectionContent}>{phoneNumber}</Text>
+          </View>
           {jobOption === 'Employee' && (
             <>
           <View style={styles.section}>

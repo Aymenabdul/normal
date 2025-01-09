@@ -49,6 +49,10 @@ const LoginScreen = () => {
 
       const {firstName, jobOption, userId, industry, videos} = response.data;
 
+      console.log('====================================');
+      console.log('joboption in loginScreen ',jobOption);
+      console.log('====================================');
+
       console.log('API Response:', response.data);
 
       if (Array.isArray(videos) && videos.length > 0 && videos[0]) {
@@ -73,7 +77,7 @@ const LoginScreen = () => {
             industry,
             videos[0] ? videos[0].videoId : null,
           );
-          navigation.navigate('HomeScreen');
+          navigation.navigate('home1');
         } else if (jobOption === 'Employer' || jobOption === 'Investor') {
           // Save the user data without videoId if not available
           await saveStorage(userId, firstName, jobOption, industry);
@@ -176,9 +180,9 @@ const LoginScreen = () => {
               await AsyncStorage.setItem('firstName',firstName);
 
               // Navigate based on jobOption
-              if (jobOption === 'Employer' || jobOption === 'Investor') {
+              if (jobOption === 'Employer' || jobOption === 'Investor' || jobOption === 'Freelancer') {
                 console.log('Navigating to HomeScreen...');
-                navigation.navigate('HomeScreen', {
+                navigation.navigate('home1', {
                   firstName,
                   email,
                   jobOption,
@@ -265,7 +269,7 @@ const LoginScreen = () => {
           });
         } else if (jobOption === 'Employee' || jobOption === 'Entrepreneur') {
           console.log('Navigating to home1...');
-          navigation.navigate('HomeScreen', {
+          navigation.navigate('home1', {
             firstName: given_name,
             email,
             jobOption,
@@ -317,7 +321,7 @@ const LoginScreen = () => {
             });
           } else if (role === 'Employee' || role === 'Entrepreneur') {
             console.log('Navigating to home1...');
-            navigation.navigate('HomeScreen', {
+            navigation.navigate('home1', {
               firstName: given_name,
               email,
               jobOption: role,

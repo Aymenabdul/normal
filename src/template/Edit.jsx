@@ -327,12 +327,36 @@ const Edit = () => {
       Alert.alert('Phone Number is required!');
       return;
     }
-    if(password !== confirmPassword){
+    if (password !== confirmPassword) {
       Alert.alert('please type the password correctly !!!');
       return;
     }
     if (phoneNumber.length !== 10) {
       Alert.alert('Enter a valid mobile number');
+      return;
+    }
+    const emailExists = await checkIfEmailExists(email);
+    if (emailExists) {
+      Alert.alert('Validation Error', 'Email is already registered!');
+      return;
+    }
+
+    // Check for public domain email if jobOption is "employer"
+    if (jobOption === 'Employer') {
+      const isPublicEmail = await checkIfPublicEmail(email);
+      if (isPublicEmail) {
+        Alert.alert(
+          'Validation Error',
+          'Employers must use a company email, not a public domain email!',
+        );
+        return;
+      }
+    }
+
+    // Check if phone number is already taken
+    const phoneExists = await checkIfPhoneExists(phoneNumber);
+    if (phoneExists) {
+      Alert.alert('Validation Error', 'Phone number is already registered!');
       return;
     }
     setLoading(true);
@@ -381,6 +405,25 @@ const Edit = () => {
       Alert.alert('Error', 'Failed to update profile. Please try again later.');
     } finally {
       setLoading(false);
+    }
+  };
+  const checkIfPublicEmail = async () => {
+    try {
+      const response = await axios.post(
+        `${env.baseURL}/users/check-Recruteremail`,
+        {email},
+        {headers: {'Content-Type': 'application/json'}},
+      );
+      console.log('Response from public email check:', response.data);
+
+      // Check if the backend returned an error indicating a public domain email
+      if (response.data.error === 'Public email domains are not allowed') {
+        return true; // Email is from a public domain
+      }
+      return false; // Email is valid
+    } catch (error) {
+      console.error('Error checking public email:', error);
+      return false; // Default to valid email if there's an error
     }
   };
 

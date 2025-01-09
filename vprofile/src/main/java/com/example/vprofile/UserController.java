@@ -2,6 +2,7 @@ package com.example.vprofile;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +45,38 @@ public ResponseEntity<Map<String, Object>> registerUser(@RequestBody User user) 
         boolean exists = userRepository.existsByEmail(email);
         return ResponseEntity.ok(Collections.singletonMap("exists", exists));
     }
+
+    @PostMapping("/check-Recruteremail")
+public ResponseEntity<Map<String, Object>> checkRecEmail(@RequestBody Map<String, String> emailPayload) {
+    String email = emailPayload.get("email");
+
+    // List of restricted domains
+    List<String> restrictedDomains = List.of("gmail.com", "yahoo.com", "outlook.com", "hotmail.com","example.com");
+
+    // Extract the domain from the email
+    String[] emailParts = email.split("@");
+    if (emailParts.length != 2) {
+        return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Invalid email format"));
+    }
+    String emailDomain = emailParts[1];
+
+    // Check if the domain is restricted
+    if (restrictedDomains.contains(emailDomain.toLowerCase())) {
+        return ResponseEntity.ok(Collections.singletonMap("error", "Public email domains are not allowed"));
+    }
+
+    // Check if the email already exists in the database
+    boolean exists = userRepository.existsByEmail(email);
+    Map<String, Object> response = new HashMap<>();
+    response.put("exists", exists);
+
+    if (!exists) {
+        response.put("message", "Email is valid and can be used.");
+    }
+
+    return ResponseEntity.ok(response);
+}
+
 
     @PostMapping("/check-phone")
     public ResponseEntity<Boolean> checkPhone(@RequestBody String phoneNumber) {

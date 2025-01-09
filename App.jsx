@@ -16,6 +16,7 @@ import LikeScreen from './src/template/likedvideo';
 import Edit from './src/template/Edit';
 import Filtered from './src/template/filterd';
 import Trending from './src/template/trending';
+import Myvideos from './src/template/myvideos';
 const Stack = createNativeStackNavigator();
 const App = () => {
   useEffect(() => {
@@ -55,6 +56,7 @@ const App = () => {
           <Stack.Screen name="Filtered" component={Filtered}/>
           <Stack.Screen name="Edit" component={Edit}/>
           <Stack.Screen name="Trending" component={Trending}/>
+          <Stack.Screen name="Myvideos" component={Myvideos}/>
         </Stack.Navigator>
       </NavigationContainer>
   );

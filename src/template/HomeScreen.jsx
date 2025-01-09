@@ -23,7 +23,7 @@ import Ant from 'react-native-vector-icons/AntDesign';
 import Shares from 'react-native-vector-icons/Entypo';
 import Like from 'react-native-vector-icons/Foundation';
 import Phone from 'react-native-vector-icons/FontAwesome6';
-import Whatsapp from 'react-native-vector-icons/FontAwesome';
+import Whatsapp from 'react-native-vector-icons/Entypo';
 import Share from 'react-native-share'; // Import the share module
 import {PermissionsAndroid, Platform} from 'react-native';
 import notifee from '@notifee/react-native';
@@ -52,6 +52,66 @@ const HomeScreen = () => {
   const [videoId, setVideoId] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState(null); // To store owner's phone number
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [email, setEmail] = useState('');
+  const [transcription, setTranscription] = useState();
+  const [currentTime, setCurrentTime] = useState(0);
+  const [subtitles, setSubtitles] = useState([]);
+  const [currentSubtitle, setCurrentSubtitle] = useState('');
+  const subtitlesUrl = `${env.baseURL}/api/videos/${userId}/subtitles.srt`;
+
+  const parseTimeToSeconds = timeStr => {
+    const [hours, minutes, seconds] = timeStr.split(':');
+    const [sec, milli] = seconds.split(',');
+    return (
+      parseInt(hours, 10) * 3600 +
+      parseInt(minutes, 10) * 60 +
+      parseInt(sec, 10) +
+      parseInt(milli, 10) / 1000
+    );
+  };
+
+  useEffect(() => {
+    const activeSubtitle = subtitles.find(
+      subtitle =>
+        currentTime >= subtitle.startTime && currentTime <= subtitle.endTime,
+    );
+    setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : '');
+  }, [currentTime, subtitles]);
+
+  useEffect(() => {
+    const parseSRT = srtText => {
+      const lines = srtText.split('\n');
+      const parsedSubtitles = [];
+      let i = 0;
+
+      while (i < lines.length) {
+        if (lines[i].match(/\d+/)) {
+          const startEnd = lines[i + 1].split(' --> ');
+          const startTime = parseTimeToSeconds(startEnd[0]);
+          const endTime = parseTimeToSeconds(startEnd[1]);
+          const text = lines[i + 2];
+          parsedSubtitles.push({startTime, endTime, text});
+          i += 4;
+        } else {
+          i++;
+        }
+      }
+
+      return parsedSubtitles;
+    };
+
+    const fetchSubtitles = async () => {
+      try {
+        const response = await fetch(subtitlesUrl);
+        const text = await response.text();
+        const parsedSubtitles = parseSRT(text);
+        setSubtitles(parsedSubtitles);
+      } catch (error) {
+        console.error('Error fetching subtitles:', error);
+      }
+    };
+    fetchSubtitles();
+  }, [subtitlesUrl]);
 
   const handleGesture = event => {
     const {translationY} = event.nativeEvent;
@@ -173,7 +233,7 @@ const HomeScreen = () => {
           const likeStatus = response.data[videoId]; // Use videoId to extract like status
           console.log('Like status for current videoId:', likeStatus); // Check if likeStatus is correct
 
-          setIsLiked(likeStatus); // Set the like status
+          // setIsLiked(likeStatus); // Set the like status
         } catch (error) {
           console.error('Error fetching like status:', error);
         }
@@ -205,7 +265,6 @@ const HomeScreen = () => {
 
           // Convert profile image to Base64 if necessary
           const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
-
           // Update the modal with the fetched data
           setModalFirstName(fetchedFirstName || 'Default Name');
           setModalProfileImage(base64Image || 'defaultProfileImageUrl');
@@ -228,7 +287,8 @@ const HomeScreen = () => {
           );
           if (response.data && response.data.phoneNumber) {
             setPhoneNumber(response.data.phoneNumber);
-            console.log('Phone number found:', response.data.phoneNumber);
+            setEmail(response.data.email);
+            console.log('Phone number found:', response.data);
           } else {
             Alert.alert(
               'Error',
@@ -257,7 +317,7 @@ const HomeScreen = () => {
         // Retrieve values from AsyncStorage
         const apiFirstName = await AsyncStorage.getItem('firstName');
         const apiUserId = await AsyncStorage.getItem('userId');
-
+        const apiEmail = await AsyncStorage.getItem('email');
         // Convert userId and videoId from string to integer
         const parsedUserId = apiUserId ? parseInt(apiUserId, 10) : null;
 
@@ -266,6 +326,7 @@ const HomeScreen = () => {
         // Set state with retrieved data
         setFirstName(apiFirstName);
         setUserId(parsedUserId); // Set parsed userId in state
+        setEmail(apiEmail);
         // Call functions to fetch additional data (profile picture, video, etc.)
         fetchProfilePic(parsedUserId);
       } catch (error) {
@@ -305,6 +366,7 @@ const HomeScreen = () => {
       .then(response => {
         if (response.data && response.data.phoneNumber) {
           setPhoneNumber(response.data.phoneNumber);
+          setEmail(response.data.email);
           console.log(response.data.phoneNumber);
           console.log('Phone number found:', response.data.phoneNumber); // Log the phone number
         } else {
@@ -333,30 +395,32 @@ const HomeScreen = () => {
   };
 
   // Function to send a WhatsApp message
-  const sendWhatsappMessage = () => {
-    console.log('sendWhatsappMessage function called'); // Log when the function is called
+  const sendEmail = () => {
+    console.log('sendEmail function called', email); // Log when the function is called
 
-    if (phoneNumber) {
-      const message = `Hello, ${modalFirstName} it's nice to connect with you.`; // Customize your message
-      const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(
-        message,
-      )}`;
+    if (email) {
+      const subject = 'Hello from Wezume'; // Customize your email subject
+      const body = `Hello, ${modalFirstName}, it's nice to connect with you.`; // Customize your email body
+      const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(
+        subject,
+      )}&body=${encodeURIComponent(body)}`;
 
-      console.log('Phone number:', phoneNumber); // Log the phone number
-      console.log('Message:', message); // Log the message
-      console.log('Constructed URL:', url); // Log the URL being used for the WhatsApp message
+      console.log('Email Address:', email); // Log the email address
+      console.log('Email Subject:', subject); // Log the email subject
+      console.log('Email Body:', body); // Log the email body
+      console.log('Constructed Mailto URL:', mailtoUrl); // Log the constructed mailto URL
 
-      Linking.openURL(url).catch(err => {
-        console.error('Error sending WhatsApp message:', err);
+      Linking.openURL(mailtoUrl).catch(err => {
+        console.error('Error sending email:', err);
         Alert.alert(
           'Error',
-          'Failed to send message. Make sure WhatsApp is installed and the phone number is correct.',
+          'Failed to open email client. Make sure an email client is installed and configured on your device.',
         );
       });
     } else {
-      console.log('No phone number, fetching phone number...'); // Log that we're fetching the phone number
+      console.log('No email address provided'); // Log if no email address is available
+      Alert.alert('Error', 'Email address is not available.');
     }
-    fetchPhoneNumber(videoId);
   };
 
   useEffect(() => {
@@ -443,11 +507,27 @@ const HomeScreen = () => {
       }
     };
     fetchVideos();
-    fetchProfilePic(userId); // Fetch all videos if no filteredVideos are provided
   }, [userId, videoId]);
 
-  const fetchLikeCount = videoId => {
-    console.log('Fetching like count for videoId:', videoId); // Check if the videoId is correct
+  const fetchTranscription = async () => {
+    console.log('====================================');
+    console.log('trans userID', userId);
+    console.log('====================================');
+    try {
+      const response = await axios.get(
+        `${env.baseURL}/api/videos/${userId}/transcription`,
+      );
+      if (response.data.transcription) {
+        const fetchedTranscription = response.data.transcription;
+        setTranscription(fetchedTranscription);
+      } else {
+      }
+    } catch (error) {
+      console.error('Error fetching transcription:', error.message);
+    }
+  };
+
+  const fetchLikeCount = () => {
     axios
       .get(`${env.baseURL}/api/videos/${videoId}/like-count`)
       .then(response => {
@@ -520,9 +600,6 @@ const HomeScreen = () => {
 
   // Handle dislike action
   const handleDislike = async () => {
-    console.log('====================================');
-    console.log(videoId);
-    console.log('====================================');
     const newLikedState = !isLiked[videoId]; // Toggle the dislike status (opposite of like)
     setIsLiked(prevState => ({
       ...prevState,
@@ -539,6 +616,31 @@ const HomeScreen = () => {
       }
     } catch (error) {
       console.error('Error toggling dislike:', error);
+    }
+  };
+
+  const fetchUserDetails = async () => {
+    try {
+      const response = await axios.get(
+        `${env.baseURL}/api/videos/user/${videoId}/details`,
+      );
+      // console.log('User details response:', response.data); // Log the user details
+      const {firstName: fetchedFirstName, profileImage: fetchedProfileImage} =
+        response.data;
+
+      // Convert profile image to Base64 if necessary
+      const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
+
+      // Update the modal with the fetched data
+      setModalFirstName(fetchedFirstName || 'Default Name');
+      setModalProfileImage(base64Image || 'defaultProfileImageUrl');
+    } catch (error) {
+      console.error('Error fetching user details:', error);
+
+      // Reset to default values if fetching fails
+      setModalFirstName('Default Name');
+      setModalProfileImage('defaultProfileImageUrl');
+      setLikeCount(0); // Reset like count
     }
   };
 
@@ -570,12 +672,14 @@ const HomeScreen = () => {
       setModalProfileImage(null);
     } finally {
       // Make sure to use the passed videoId here for fetching like count and status
-      fetchLikeCount(videoId);
-      fetchLikeStatus(videoId);
+      fetchLikeCount();
+      fetchLikeStatus();
 
       // Set selected video URI and show the modal
       setSelectedVideoUri(uri);
       fetchPhoneNumber(videoId);
+      fetchTranscription();
+      fetchUserDetails();
       setIsModalVisible(true);
       console.log('Modal should now be visible');
     }
@@ -684,6 +788,7 @@ const HomeScreen = () => {
                       console.error('Video playback error:', error)
                     }
                   />
+                  <Text style={styles.subtitle}>{currentSubtitle}</Text>
                   <TouchableOpacity
                     onPress={() => navigation.navigate('Trending')}
                     style={styles.trending1}>
@@ -704,31 +809,31 @@ const HomeScreen = () => {
                     style={styles.buttoncls}>
                     <Ant name={'arrowleft'} style={styles.buttoncls} />
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    activeOpacity={1}
-                    onPress={() =>
-                      isLiked[videoId] ? handleDislike() : handleLike()
-                    }>
-                    <Like
-                      name={'heart'}
-                      style={[
-                        styles.buttonheart,
-                        {color: isLiked[videoId] ? 'red' : '#ffffff'}, // Dynamically change color
-                      ]}
-                    />
-                    <Text style={styles.count}>{likeCount}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity activeOpacity={1} onPress={shareOption}>
-                    <Shares name={'share'} style={styles.buttonshare} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    activeOpacity={1}
-                    onPress={sendWhatsappMessage}>
-                    <Whatsapp name={'whatsapp'} style={styles.buttonmsg} />
-                  </TouchableOpacity>
-                  <TouchableOpacity activeOpacity={1} onPress={makeCall}>
-                    <Phone name={'phone-volume'} style={styles.buttonphone} />
-                  </TouchableOpacity>
+                  <View style={styles.reactions}>
+                    <TouchableOpacity
+                      activeOpacity={1}
+                      onPress={() =>
+                        isLiked[videoId] ? handleDislike() : handleLike()
+                      }>
+                      <Like
+                        name={'heart'}
+                        style={[
+                          styles.buttonheart,
+                          {color: isLiked[videoId] ? 'red' : '#ffffff'}, // Dynamically change color
+                        ]}
+                      />
+                      <Text style={styles.count}>{likeCount}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity activeOpacity={1} onPress={shareOption}>
+                      <Shares name={'share'} style={styles.buttonshare} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={sendEmail}>
+                      <Whatsapp name={'email'} style={styles.buttonmsg} />
+                    </TouchableOpacity>
+                    <TouchableOpacity activeOpacity={1} onPress={makeCall}>
+                      <Phone name={'phone-volume'} style={styles.buttonphone} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </View>
@@ -740,6 +845,9 @@ const HomeScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  reactions: {
+    flexDirection: 'row',
+  },
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -753,17 +861,18 @@ const styles = StyleSheet.create({
   columnWrapper: {
     justifyContent: 'flex-start',
     gap: 1,
+    marginBottom: '-2.7%',
   },
   videoPlayer: {
-    height:190,
-    width:'100%', // Adjust width for a uniform layout
+    height: 190,
+    width: '100%', // Adjust width for a uniform layout
   },
   imageBackground: {
     flex: 1,
     justifyContent: 'center',
   },
   videoList: {
-    marginTop: '1',
+    marginTop: 1,
     // paddingHorizontal: 2, // Padding around the list
   },
   emptyListText: {
@@ -773,12 +882,13 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    // justifyContent: 'center',
+    // alignItems: 'center',
+    width: '100%',
     // backgroundColor: 'rgba(0, 0, 0, 0.8)', // Dark background for the modal
   },
-  secondRow:{
-marginTop:'1%',
+  secondRow: {
+    marginTop: '1%',
   },
   modalContent: {
     width: '100%',
@@ -824,49 +934,52 @@ marginTop:'1%',
     right: '89%',
     fontSize: 24,
     fontWeight: '900',
-    backgroundColor: '#000',
   },
   buttonheart: {
     position: 'absolute',
-    top: '62%',
-    right: 40,
+    top: '60%',
+    right: 32,
     color: '#ffffff',
     fontSize: 30,
     zIndex: 10,
     elevation: 10,
+    padding: 10,
   },
   buttonshare: {
     position: 'absolute',
-    top: '69%',
-    right: 40,
+    top: '67%',
+    right: 27,
     color: '#ffffff',
     fontSize: 30,
     zIndex: 10,
     elevation: 10,
+    padding: 10,
   },
   buttonphone: {
     position: 'absolute',
-    top: '75%',
-    right: 40,
+    top: '73%',
+    right: 30,
     color: '#ffffff',
     fontSize: 22,
     zIndex: 10,
+    padding: 10,
     elevation: 10,
   },
   buttonmsg: {
     position: 'absolute',
-    top: '80%',
-    right: 40,
+    top: '78%',
+    right: 30,
     color: '#ffffff',
-    fontSize: 30,
+    fontSize: 24,
     zIndex: 10,
     elevation: 10,
+    padding: 10,
   },
   count: {
     position: 'absolute',
     right: 48,
     color: '#ffffff',
-    top: '65.5%',
+    top: '65%',
     fontWeight: '900',
     zIndex: 10,
     elevation: 10,

@@ -12,6 +12,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import UploadImage from 'react-native-vector-icons/MaterialCommunityIcons';
 import FastImage from 'react-native-fast-image';
+import Back from 'react-native-vector-icons/AntDesign';
 import axios from 'axios';
 import {Buffer} from 'buffer';
 import env from './env';
@@ -184,149 +185,156 @@ const Profile = () => {
   };
 
   return (
-    <FastImage
+    <><View style={styles.backarrow}>
+      <TouchableOpacity onPress={() => navigation.goBack()}>
+        <Back name={'leftcircle'} size={24} color={'#ffffff'} style={{elevation:10}} />
+      </TouchableOpacity>
+    </View><FastImage
       style={styles.backgroundImage}
-      source={require('./assets/onbor.gif')}
+      source={require('./assets/login1.jpg')}
       resizeMode={FastImage.resizeMode.cover}>
-      {/* <Image style={styles.img} source={require('./assets/Png-02.png')} /> */}
-      <LinearGradient colors={['#d3e4f6', '#a1d1ff']} style={styles.container}>
-        {/* <Image style={styles.img2} source={require('./assets/logo.png')} /> */}
-        <Text style={styles.title}>Search</Text>
+        {/* <Image style={styles.img} source={require('./assets/Png-02.png')} /> */}
+        <LinearGradient colors={['#d3e4f6', '#a1d1ff']} style={styles.container}>
+          {/* <Image style={styles.img2} source={require('./assets/logo.png')} /> */}
+          <Text style={styles.title}>Search</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Key Skills"
-          placeholderTextColor="#000"
-          value={keySkills}
-          onChangeText={setKeySkills}
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="Key Skills"
+            placeholderTextColor="#000"
+            value={keySkills}
+            onChangeText={setKeySkills} />
 
-        {/* Experience Checkboxes */}
-        <TouchableOpacity
-          onPress={toggleExperienceDropdown}
-          style={styles.dropdownButton}>
-          <Text style={styles.dropdownButtonText}>
-            {experience.length ? experience.join(', ') : 'Select Experience'}
-          </Text>
-          <UploadImage name="menu-down" size={20} />
-        </TouchableOpacity>
-
-        {/* Experience Dropdown Content */}
-        {isExperienceDropdownOpen && (
-          <View style={styles.dropdownContainer}>
-            <ScrollView style={styles.scrollView} nestedScrollEnabled={true}>
-              {experienceOptions.map(option => (
-                <TouchableOpacity
-                  key={option.value}
-                  onPress={() => selectExperience(option.value)}
-                  style={styles.checkboxContainer}>
-                  <Text style={styles.checkboxText}>
-                    {experience.includes(option.value) ? '✔️' : '⭕'}{' '}
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Industry Checkboxes */}
-        <TouchableOpacity
-          onPress={toggleIndustryDropdown}
-          style={styles.dropdownButton}>
-          <Text style={styles.dropdownButtonText}>
-            {industry.length ? industry.join(', ') : 'Select Industry'}
-          </Text>
-          <UploadImage name="menu-down" size={20} />
-        </TouchableOpacity>
-
-        {/* Industry Dropdown Content */}
-        {isIndustryDropdownOpen && (
-          <View style={styles.dropdownContainer}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search industry"
-              placeholderTextColor="#666"
-              value={industrySearchText}
-              onChangeText={setIndustrySearchText}
-            />
-            <ScrollView style={styles.scrollView} nestedScrollEnabled={true}>
-              {filteredIndustries.length > 0 ? (
-                filteredIndustries.map(industryName => (
-                  <TouchableOpacity
-                    key={industryName}
-                    onPress={() => selectIndustry(industryName)}
-                    style={styles.checkboxContainer}>
-                    <Text style={styles.checkboxText}>
-                      {industry.includes(industryName) ? '✔️' : '⭕'}{' '}
-                      {industryName}
-                    </Text>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <TouchableOpacity
-                  onPress={() => selectIndustry('Others')}
-                  style={styles.checkboxContainer}>
-                  <Text style={styles.checkboxText}>Others</Text>
-                </TouchableOpacity>
-              )}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* City Checkboxes */}
-        <TouchableOpacity
-          onPress={toggleDropdown}
-          style={styles.dropdownButton}>
-          <Text style={styles.dropdownButtonText}>
-            {city.length ? city.join(', ') : 'Select City'}
-          </Text>
-          <UploadImage name="menu-down" size={20} />
-        </TouchableOpacity>
-
-        {/* City Dropdown Content */}
-        {isDropdownOpen && (
-          <View style={styles.dropdownContainer}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search city"
-              placeholderTextColor="#666"
-              value={searchText}
-              onChangeText={setSearchText}
-            />
-            <ScrollView style={styles.scrollView} nestedScrollEnabled={true}>
-              {filteredCities.length > 0 ? (
-                filteredCities.map(cityName => (
-                  <TouchableOpacity
-                    key={cityName}
-                    onPress={() => selectCity(cityName)}
-                    style={styles.checkboxContainer}>
-                    <Text style={styles.checkboxText}>
-                      {city.includes(cityName) ? '✔️' : '⭕'} {cityName}
-                    </Text>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <TouchableOpacity
-                  onPress={() => selectCity('Others')}
-                  style={styles.checkboxContainer}>
-                  <Text style={styles.checkboxText}>Others</Text>
-                </TouchableOpacity>
-              )}
-            </ScrollView>
-          </View>
-        )}
-        <LinearGradient colors={['#70bdff', '#2e80d8']} style={styles.btn}>
-          <TouchableOpacity style={styles.signupButton} onPress={handleFilter}>
-            <Text style={styles.signupButtonText}>Filter</Text>
+          {/* Experience Checkboxes */}
+          <TouchableOpacity
+            onPress={toggleExperienceDropdown}
+            style={styles.dropdownButton}>
+            <Text style={styles.dropdownButtonText}>
+              {experience.length ? experience.join(', ') : 'Select Experience'}
+            </Text>
+            <UploadImage name="menu-down" size={20} />
           </TouchableOpacity>
+
+          {/* Experience Dropdown Content */}
+          {isExperienceDropdownOpen && (
+            <View style={styles.dropdownContainer}>
+              <ScrollView style={styles.scrollView} nestedScrollEnabled={true}>
+                {experienceOptions.map(option => (
+                  <TouchableOpacity
+                    key={option.value}
+                    onPress={() => selectExperience(option.value)}
+                    style={styles.checkboxContainer}>
+                    <Text style={styles.checkboxText}>
+                      {experience.includes(option.value) ? '✔️' : '⭕'}{' '}
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Industry Checkboxes */}
+          <TouchableOpacity
+            onPress={toggleIndustryDropdown}
+            style={styles.dropdownButton}>
+            <Text style={styles.dropdownButtonText}>
+              {industry.length ? industry.join(', ') : 'Select Industry'}
+            </Text>
+            <UploadImage name="menu-down" size={20} />
+          </TouchableOpacity>
+
+          {/* Industry Dropdown Content */}
+          {isIndustryDropdownOpen && (
+            <View style={styles.dropdownContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search industry"
+                placeholderTextColor="#666"
+                value={industrySearchText}
+                onChangeText={setIndustrySearchText} />
+              <ScrollView style={styles.scrollView} nestedScrollEnabled={true}>
+                {filteredIndustries.length > 0 ? (
+                  filteredIndustries.map(industryName => (
+                    <TouchableOpacity
+                      key={industryName}
+                      onPress={() => selectIndustry(industryName)}
+                      style={styles.checkboxContainer}>
+                      <Text style={styles.checkboxText}>
+                        {industry.includes(industryName) ? '✔️' : '⭕'}{' '}
+                        {industryName}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => selectIndustry('Others')}
+                    style={styles.checkboxContainer}>
+                    <Text style={styles.checkboxText}>Others</Text>
+                  </TouchableOpacity>
+                )}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* City Checkboxes */}
+          <TouchableOpacity
+            onPress={toggleDropdown}
+            style={styles.dropdownButton}>
+            <Text style={styles.dropdownButtonText}>
+              {city.length ? city.join(', ') : 'Select City'}
+            </Text>
+            <UploadImage name="menu-down" size={20} />
+          </TouchableOpacity>
+
+          {/* City Dropdown Content */}
+          {isDropdownOpen && (
+            <View style={styles.dropdownContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search city"
+                placeholderTextColor="#666"
+                value={searchText}
+                onChangeText={setSearchText} />
+              <ScrollView style={styles.scrollView} nestedScrollEnabled={true}>
+                {filteredCities.length > 0 ? (
+                  filteredCities.map(cityName => (
+                    <TouchableOpacity
+                      key={cityName}
+                      onPress={() => selectCity(cityName)}
+                      style={styles.checkboxContainer}>
+                      <Text style={styles.checkboxText}>
+                        {city.includes(cityName) ? '✔️' : '⭕'} {cityName}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => selectCity('Others')}
+                    style={styles.checkboxContainer}>
+                    <Text style={styles.checkboxText}>Others</Text>
+                  </TouchableOpacity>
+                )}
+              </ScrollView>
+            </View>
+          )}
+          <LinearGradient colors={['#70bdff', '#2e80d8']} style={styles.btn}>
+            <TouchableOpacity style={styles.signupButton} onPress={handleFilter}>
+              <Text style={styles.signupButtonText}>Filter</Text>
+            </TouchableOpacity>
+          </LinearGradient>
         </LinearGradient>
-      </LinearGradient>
-    </FastImage>
+      </FastImage></>
   );
 };
 
 const styles = StyleSheet.create({
+  backarrow:{
+    zIndex:10,
+    marginBottom:'-8%',
+    left:30,
+    top:30,
+  },
   backgroundImage: {
     flex: 1,
     justifyContent: 'center',

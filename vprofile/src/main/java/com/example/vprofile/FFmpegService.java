@@ -27,14 +27,14 @@ public class FFmpegService {
         ffmpegPath = "/usr/bin/ffmpeg";
 
         // Path to the watermark image
-        String watermarkPath = "img/watermark.png";
+        String watermarkPath = "/home/wezume/htdocs/wezume.in/img/watermark.png";
 
         // Command to overlay watermark with scaling applied only to watermark
         String[] command = {
             ffmpegPath,
             "-i", inputFile.getAbsolutePath(),
             "-i", watermarkPath,
-            "-filter_complex", "[1:v]scale=300:150[wm];[0:v][wm]overlay=x=W-w-10:y=10",
+            "-filter_complex", "[1:v]scale=300:150[wm];[0:v][wm]overlay=x=W-w-80:y=20",
             "-vcodec", "libx264",
             "-preset", "ultrafast",
             "-crf", "30",

@@ -40,37 +40,7 @@ const Home1 = () => {
   const [transcription, setTranscription] = useState('');
   const [isVideoVisible, setIsVideoVisible] = useState(true);
 
-  useEffect(() => {
-    const filter = new Filter(); // Initialize the bad-words filter
-    const fetchTranscription = async () => {
-      try {
-        const response = await axios.get(
-          `${env.baseURL}/api/videos/${userId}/transcription`,
-        );
-        if (response.data.transcription) {
-          const fetchedTranscription = response.data.transcription;
-          setTranscription(fetchedTranscription);
-
-          // Check for profanity in the transcription
-          const cleanText = filter.clean(fetchedTranscription);
-
-          // If profanity is detected (cleanText is different from original transcription), hide or blur the video
-          if (cleanText !== fetchedTranscription) {
-            console.log('Profanity detected! Hiding or blurring the video.');
-            setIsVideoVisible(false); // Hide the video if profanity is detected
-          } else {
-            console.log('No profanity detected.');
-            setIsVideoVisible(true); // Show the video if no profanity is detected
-          }
-        } else {
-        }
-      } catch (error) {
-        console.error('Error fetching transcription:', error.message);
-      }
-    };
-
-    fetchTranscription();
-  }, [userId]); // Dependency array to trigger the effect when userId changes
+  const subtitlesUrl = `${env.baseURL}/api/videos/${userId}/subtitles.srt`;
 
   // Function to convert time format to seconds
   const parseTimeToSeconds = timeStr => {
@@ -94,23 +64,18 @@ const Home1 = () => {
 
   useEffect(() => {
     const backAction = () => {
-      if (isFocus) {
-        // Optional: Show a confirmation alert before exiting the app
-        Alert.alert('Exit App', 'Do you want to go Back?', [
-          {
-            text: 'Cancel',
-            onPress: () => null,
-            style: 'cancel',
-          },
-          {text: 'Yes', onPress: () => navigation.navigate('HomeScreen')},
-        ]);
+      // Optional: Show a confirmation alert before exiting the app
+      Alert.alert('Exit App', 'Do you want to exit the app?', [
+        {
+          text: 'Cancel',
+          onPress: () => null,
+          style: 'cancel',
+        },
+        {text: 'Yes', onPress: () => BackHandler.exitApp()},
+      ]);
 
-        // Returning true indicates that we have handled the back press
-        return true;
-      } else {
-        navigation.goBack();
-        return true;
-      }
+      // Returning true indicates that we have handled the back press
+      return true;
     };
 
     // Add event listener for back press
@@ -120,7 +85,7 @@ const Home1 = () => {
     return () => {
       BackHandler.removeEventListener('hardwareBackPress', backAction);
     };
-  });
+  }, []);
 
   // Fetch subtitles when component is mounted
   useEffect(() => {
@@ -155,8 +120,8 @@ const Home1 = () => {
         console.error('Error fetching subtitles:', error);
       }
     };
-    fetchSubtitles();
-  }, [subtitlesUrl]);
+    fetchSubtitles(userId);
+  }, [subtitlesUrl,userId]);
 
   // Fetch profile image
   const fetchProfilePic = async userId => {
@@ -253,7 +218,6 @@ const Home1 = () => {
     );
   };
 
-  const subtitlesUrl = `${env.baseURL}/api/videos/${userId}/subtitles.srt`;
 
   const shareOption = async () => {
     const share = {
@@ -360,6 +324,7 @@ const Home1 = () => {
         // Call functions to fetch additional data (profile picture, video, etc.)
         fetchProfilePic(apiUserId);
         fetchVideo(apiUserId);
+        fetchTranscription(apiUserId);
 
         // Log the videoId after setting it
         console.log('Retrieved videoId from AsyncStorage:', parsedVideoId);
@@ -369,7 +334,39 @@ const Home1 = () => {
     };
 
     loadDataFromStorage();
-  }, []); // Empty dependency array means this effect runs once when the component mounts
+
+    const filter = new Filter(); // Initialize the bad-words filter
+    const fetchTranscription = async userId => {
+      console.log('====================================');
+      console.log('trans userId ',userId);
+      console.log('====================================');
+      try {
+        const response = await axios.get(
+          `${env.baseURL}/api/videos/${userId}/transcription`,
+        );
+        if (response.data.transcription) {
+          const fetchedTranscription = response.data.transcription;
+          setTranscription(fetchedTranscription);
+
+          // Check for profanity in the transcription
+          const cleanText = filter.clean(fetchedTranscription);
+
+          // If profanity is detected (cleanText is different from original transcription), hide or blur the video
+          if (cleanText !== fetchedTranscription) {
+            console.log('Profanity detected! Hiding or blurring the video.');
+            setIsVideoVisible(false); // Hide the video if profanity is detected
+          } else {
+            console.log('No profanity detected.');
+            setIsVideoVisible(true); // Show the video if no profanity is detected
+          }
+        } else {
+        }
+      } catch (error) {
+        console.error('Error fetching transcription:', error.message);
+      }
+    };
+
+  }, [userId]); // Empty dependency array means this effect runs once when the component mounts
 
   return (
     <View style={styles.container}>
@@ -383,16 +380,26 @@ const Home1 = () => {
       <ImageBackground
         source={require('./assets/login.jpg')}
         style={styles.imageBackground}>
+        <View style={{marginTop: '20%'}}></View>
         <View
-          style={{marginTop:'20%'}}></View>
-        <View style={{height:'100%',width:'100%', justifyContent: 'center',alignItems:'center'}}>
+          style={{
+            height: '100%',
+            width: '100%',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}>
           {loading ? (
             <ActivityIndicator size="large" color="#000" />
           ) : videoUri && isVideoVisible ? (
             // Show the video if it's visible
             <TouchableOpacity
               onPress={() => setModalVisible(true)}
-              style={{height:'80%',width:'100%', justifyContent: 'center',alignItems:'center'}}>
+              style={{
+                height: '80%',
+                width: '100%',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
               <Video
                 source={{uri: videoUri}}
                 style={styles.videoPlayer}
@@ -455,7 +462,10 @@ const Home1 = () => {
 const styles = StyleSheet.create({
   imageBackground: {
     flex: 15,
-    justifyContent: 'center',alignItems:'center',width:'100%',height:'100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    height: '100%',
   },
   container: {
     flex: 1,
@@ -467,13 +477,13 @@ const styles = StyleSheet.create({
   },
   videoItem: {
     flex: 1,
-    marginTop:'10%',
+    marginTop: '10%',
   },
   videoPlayer: {
-    height:'110%',
+    height: '110%',
     borderRadius: 10,
-    width:'90%',
-    marginTop:'10%',
+    width: '90%',
+    marginTop: '10%',
   },
   transcriptionButton: {
     marginTop: -15,
@@ -587,7 +597,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    height:'20%',
+    height: '20%',
   },
   noVideoText: {
     justifyContent: 'center',
@@ -598,13 +608,13 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   subtitle: {
-    bottom: '30%',
+    bottom: '25%',
     color: 'white',
-    fontSize:22,
+    fontSize:16,
     padding: 5,
     textAlign: 'center',
-    zIndex:10,
-    width:'70%',
+    zIndex: 10,
+    width: '89%',
   },
   buttoncls: {
     color: '#ffffff',

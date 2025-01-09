@@ -9,7 +9,6 @@ import {
   Animated,
   Dimensions,
   Modal,
-  Button,
   FlatList,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
@@ -24,26 +23,65 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const {width} = Dimensions.get('window');
 
-const Header = ({Value, profile, userName, jobOption,userId}) => {
+const Header = ({Value, profile, userName, userId}) => {
   const navigation = useNavigation();
   const [menuVisible, setMenuVisible] = useState(false);
   const slideAnimation = useRef(new Animated.Value(width)).current; // Initial position off-screen to the left
   const [notifications, setNotifications] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [jobOption, setJobOption] = useState();
 
   const logouts = async () => {
-    await AsyncStorage.removeItem('jobOption');
-    await AsyncStorage.removeItem('userId');
-    await AsyncStorage.removeItem('firstName');
-    await AsyncStorage.removeItem('jobOption');
-    await AsyncStorage.removeItem('profilepic');
-    await AsyncStorage.removeItem('industry');
-    await AsyncStorage.removeItem('experience');
-    await AsyncStorage.removeItem('city');
-    await AsyncStorage.removeItem('skills');
-    await AsyncStorage.removeItem('currentEmployer');
-    navigation.navigate('LoginScreen');
+    try {
+      const keysToRemove = [
+        'jobOption',
+        'userId',
+        'firstName',
+        'profilepic',
+        'industry',
+        'experience',
+        'city',
+        'skills',
+        'currentEmployer',
+      ];
+
+      await AsyncStorage.multiRemove(keysToRemove);
+
+      // Check if all fields were removed
+      const remainingKeys = await AsyncStorage.multiGet(keysToRemove);
+      const missingKeys = remainingKeys.filter(
+        ([key, value]) => value !== null,
+      );
+
+      if (missingKeys.length === 0) {
+        console.log('All fields successfully removed. User logged out.');
+      } else {
+        console.warn(
+          'Some fields were not removed:',
+          missingKeys.map(([key]) => key),
+        );
+      }
+
+      navigation.navigate('LoginScreen');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
   };
+
+  useEffect(() => {
+    const loadDataFromStorage = async () => {
+      try {
+        // Retrieve values from AsyncStorage
+        const apiJobOption = await AsyncStorage.getItem('jobOption');
+        // Set state with retrieved data
+        setJobOption(apiJobOption);
+      } catch (error) {
+        console.error('Error loading user data from AsyncStorage', error);
+      }
+    };
+
+    loadDataFromStorage();
+  }, []); // Empty dependency array means this effect runs once when the component mounts
 
   const toggleMenu = () => {
     if (menuVisible) {
@@ -171,16 +209,20 @@ const Header = ({Value, profile, userName, jobOption,userId}) => {
                 <Search name={'search'} size={22} color={'grey'} /> Search
               </Text>
             </TouchableOpacity>
-            <View style={styles.line}></View>
             {/* Check if the user's job role is 'employee' or 'entrepreneur' */}
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('home1', {userName,userId})
-              }>
-              <Text style={styles.options}>
-                <Video name={'video'} size={22} color={'grey'} /> My Video
-              </Text>
-            </TouchableOpacity>
+            {(jobOption === 'Employee' || jobOption === 'Entrepreneur') && (
+              <>
+                <View style={styles.line}></View>
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate('Myvideos', {userName, userId})
+                  }>
+                  <Text style={styles.options}>
+                    <Video name={'video'} size={22} color={'grey'} /> Videos
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
             <View style={styles.line}></View>
             <TouchableOpacity onPress={''}>
               <Text style={styles.options}>
@@ -326,7 +368,7 @@ const styles = StyleSheet.create({
   modalMenu: {
     width: '80%',
     height: '100%',
-    backgroundColor:'rgba(255, 255, 255,0.8)',
+    backgroundColor: 'rgba(255, 255, 255,0.8)',
     padding: 20,
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
