@@ -804,35 +804,48 @@ const HomeScreen = () => {
                       Liked Video
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={closeModal}
-                    style={styles.buttoncls}>
-                    <Ant name={'arrowleft'} style={styles.buttoncls} />
-                  </TouchableOpacity>
-                  <View style={styles.reactions}>
+                  <View style={styles.buttoncls}>
                     <TouchableOpacity
-                      activeOpacity={1}
-                      onPress={() =>
-                        isLiked[videoId] ? handleDislike() : handleLike()
-                      }>
-                      <Like
-                        name={'heart'}
-                        style={[
-                          styles.buttonheart,
-                          {color: isLiked[videoId] ? 'red' : '#ffffff'}, // Dynamically change color
-                        ]}
-                      />
-                      <Text style={styles.count}>{likeCount}</Text>
+                      onPress={closeModal}
+                      style={styles.buttoncls}>
+                      <Ant name={'arrowleft'} size={30} color={'#ffffff'} />
                     </TouchableOpacity>
-                    <TouchableOpacity activeOpacity={1} onPress={shareOption}>
-                      <Shares name={'share'} style={styles.buttonshare} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={sendEmail}>
-                      <Whatsapp name={'email'} style={styles.buttonmsg} />
-                    </TouchableOpacity>
-                    <TouchableOpacity activeOpacity={1} onPress={makeCall}>
-                      <Phone name={'phone-volume'} style={styles.buttonphone} />
-                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.reactions}>
+                    <View style={styles.buttonheart}>
+                      <TouchableOpacity
+                        onPress={() =>
+                          isLiked[videoId] ? handleDislike() : handleLike()
+                        }>
+                        <Like
+                          name={'heart'}
+                          size={30}
+                          style={[
+                            {color: isLiked[videoId] ? 'red' : '#ffffff'}, // Dynamically change color
+                          ]}
+                        />
+                        <Text style={styles.count}>{likeCount}</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.buttonshare}>
+                      <TouchableOpacity onPress={shareOption}>
+                        <Shares name={'share'} size={30} color={'#ffffff'} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.buttonmsg}>
+                      <TouchableOpacity onPress={sendEmail}>
+                        <Whatsapp name={'email'} size={27} color={'#ffffff'} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.buttonphone}>
+                      <TouchableOpacity onPress={makeCall}>
+                        <Phone
+                          name={'phone-volume'}
+                          size={22}
+                          color={'#ffffff'}
+                        />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -977,9 +990,9 @@ const styles = StyleSheet.create({
   },
   count: {
     position: 'absolute',
-    right: 48,
+    right: 7,
     color: '#ffffff',
-    top: '65%',
+    top: '89%',
     fontWeight: '900',
     zIndex: 10,
     elevation: 10,

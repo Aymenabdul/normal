@@ -297,7 +297,6 @@ const Myvideos = () => {
     }
     return true;
   };
-  
 
   const fetchUserDetails = async () => {
     try {
@@ -305,10 +304,8 @@ const Myvideos = () => {
         `${env.baseURL}/api/videos/user/${videoId}/details`,
       );
       // console.log('User details response:', response.data); // Log the user details
-      const {
-        firstName: fetchedFirstName,
-        profileImage: fetchedProfileImage,
-      } = response.data;
+      const {firstName: fetchedFirstName, profileImage: fetchedProfileImage} =
+        response.data;
 
       // Convert profile image to Base64 if necessary
       const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
@@ -387,30 +384,30 @@ const Myvideos = () => {
     fetchPhoneNumber(videoId);
   };
 
- useEffect(() => {
-     const backAction = () => {
-       // Optional: Show a confirmation alert before exiting the app
-       Alert.alert('Exit App', 'Do you want to go back?', [
-         {
-           text: 'Cancel',
-           onPress: () => null,
-           style: 'cancel',
-         },
-         {text: 'Yes', onPress: () => navigation.goBack()},
-       ]);
- 
-       // Returning true indicates that we have handled the back press
-       return true;
-     };
- 
-     // Add event listener for back press
-     BackHandler.addEventListener('hardwareBackPress', backAction);
- 
-     // Cleanup the event listener on component unmount
-     return () => {
-       BackHandler.removeEventListener('hardwareBackPress', backAction);
-     };
-   }, [navigation]);
+  useEffect(() => {
+    const backAction = () => {
+      // Optional: Show a confirmation alert before exiting the app
+      Alert.alert('Exit App', 'Do you want to go back?', [
+        {
+          text: 'Cancel',
+          onPress: () => null,
+          style: 'cancel',
+        },
+        {text: 'Yes', onPress: () => navigation.goBack()},
+      ]);
+
+      // Returning true indicates that we have handled the back press
+      return true;
+    };
+
+    // Add event listener for back press
+    BackHandler.addEventListener('hardwareBackPress', backAction);
+
+    // Cleanup the event listener on component unmount
+    return () => {
+      BackHandler.removeEventListener('hardwareBackPress', backAction);
+    };
+  }, [navigation]);
 
   const fetchLikeStatus = async () => {
     try {
@@ -727,37 +724,33 @@ const Myvideos = () => {
                       Liked Video
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={closeModal}
-                    style={styles.buttoncls}>
-                    <Ant name={'arrowleft'} style={styles.buttoncls} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    activeOpacity={1}
-                    onPress={() =>
-                      isLiked[videoId] ? handleDislike() : handleLike()
-                    }
-                    >
-                    <Like
-                      name={'heart'}
-                      style={[
-                        styles.buttonheart,
-                        {color: isLiked[videoId] ? 'red' : '#ffffff'}, // Dynamically change color
-                      ]}
-                    />
-                    <Text style={styles.count}>{likeCount}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity activeOpacity={1} onPress={shareOption}>
-                    <Shares name={'share'} style={styles.buttonshare} />
-                  </TouchableOpacity>
-                  {/* <TouchableOpacity
-                    activeOpacity={1}
-                    onPress={sendWhatsappMessage}>
-                    <Whatsapp name={'whatsapp'} style={styles.buttonmsg} />
-                  </TouchableOpacity>
-                  <TouchableOpacity activeOpacity={1} onPress={makeCall}>
-                    <Phone name={'phone-volume'} style={styles.buttonphone} />
-                  </TouchableOpacity> */}
+                  <View style={styles.buttoncls}>
+                    <TouchableOpacity
+                      onPress={closeModal}
+                      style={styles.buttoncls}>
+                      <Ant name={'arrowleft'} size={30} color={'#ffffff'} />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.buttonheart}>
+                    <TouchableOpacity
+                      onPress={() =>
+                        isLiked[videoId] ? handleDislike() : handleLike()
+                      }>
+                      <Like
+                        name={'heart'}
+                        size={30}
+                        style={[
+                          {color: isLiked[videoId] ? 'red' : '#ffffff'}, // Dynamically change color
+                        ]}
+                      />
+                      <Text style={styles.count}>{likeCount}</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.buttonshare}>
+                    <TouchableOpacity onPress={shareOption}>
+                      <Shares name={'share'} size={30} color={'#ffffff'} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </View>
@@ -785,15 +778,15 @@ const styles = StyleSheet.create({
     marginBottom: '-2.7%',
   },
   videoPlayer: {
-    height:190,
-    width:'100%', // Adjust width for a uniform layout
+    height: 190,
+    width: '100%', // Adjust width for a uniform layout
   },
   imageBackground: {
     flex: 1,
     justifyContent: 'center',
   },
   videoList: {
-    marginTop:1,
+    marginTop: 1,
     // paddingHorizontal: 2, // Padding around the list
   },
   emptyListText: {
@@ -807,8 +800,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     // backgroundColor: 'rgba(0, 0, 0, 0.8)', // Dark background for the modal
   },
-  secondRow:{
-marginTop:'1%',
+  secondRow: {
+    marginTop: '1%',
   },
   modalContent: {
     width: '100%',
@@ -863,43 +856,43 @@ marginTop:'1%',
     fontSize: 30,
     zIndex: 10,
     elevation: 10,
-    padding:10,
+    padding: 10,
   },
   buttonshare: {
     position: 'absolute',
     top: '67%',
-    right:27,
+    right: 27,
     color: '#ffffff',
     fontSize: 30,
     zIndex: 10,
     elevation: 10,
-    padding:10,
+    padding: 10,
   },
   buttonphone: {
     position: 'absolute',
     top: '73%',
-    right:30,
+    right: 30,
     color: '#ffffff',
     fontSize: 22,
     zIndex: 10,
-    padding:10,
+    padding: 10,
     elevation: 10,
   },
   buttonmsg: {
     position: 'absolute',
     top: '78%',
-    right:30,
+    right: 30,
     color: '#ffffff',
     fontSize: 30,
     zIndex: 10,
     elevation: 10,
-    padding:10,
+    padding: 10,
   },
   count: {
     position: 'absolute',
-    right: 48,
+    right: 7,
     color: '#ffffff',
-    top: '65%',
+    top: '89%',
     fontWeight: '900',
     zIndex: 10,
     elevation: 10,

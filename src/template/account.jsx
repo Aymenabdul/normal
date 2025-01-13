@@ -223,7 +223,7 @@ const ProfileScreen = () => {
 
         {/* Likes Section */}
         <View style={styles.likesContainer}>
-          <FontAwesome name="thumbs-up" size={24} color="gray" />
+          <FontAwesome name="thumbs-up" size={24} color="#007bff" />
           <Text style={styles.likesText}>{likeCount}</Text>
         </View>
 
@@ -238,13 +238,13 @@ const ProfileScreen = () => {
           {/* Skills Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              <Email name={'email'} size={20} /> Email
+              <Email name={'email'} size={16} /> Email
             </Text>
             <Text style={styles.sectionContent}>{email}</Text>
           </View>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              <Phone name={'mobile-phone'} size={20} /> PhoneNumber
+              <Phone name={'mobile-phone'} size={22} /> PhoneNumber
             </Text>
             <Text style={styles.sectionContent}>{phoneNumber}</Text>
           </View>
@@ -252,7 +252,7 @@ const ProfileScreen = () => {
             <>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              <Skills name={'social-skillshare'} size={20} /> Skills
+              <Skills name={'social-skillshare'} size={22} /> Skills
             </Text>
             <Text style={styles.sectionContent}>{skills}</Text>
           </View>
@@ -274,7 +274,7 @@ const ProfileScreen = () => {
           {/* Industry and City Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              <Indus name={'industry'} size={16} /> Industry
+              <Indus name={'industry'} size={15} /> Industry
             </Text>
             <Text style={styles.sectionContent}>{industry}</Text>
           </View>
@@ -391,6 +391,7 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 24,
     fontWeight: 'bold',
+    color:'black',
   },
   jobTitle: {
     fontSize: 16,
@@ -426,7 +427,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 15,
     backgroundColor: '#ffffff',
     height: 100,
     borderRadius: 10,
@@ -435,13 +436,15 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: 'gray',
     marginBottom: -5,
     padding: 10,
   },
   sectionContent: {
     fontSize: 16,
     color: 'gray',
-    padding: 10,
+    padding:10,
+    
   },
   viewMore: {
     color: '#007bff',

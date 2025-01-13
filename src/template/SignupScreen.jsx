@@ -454,7 +454,7 @@ const SignupScreen = () => {
             />
           </Picker>
           {/* Role-specific fields */}
-          {jobOption === 'Employee' && (
+          {jobOption === 'Employee' && jobOption === 'Freelancer'(
             <>
               <TextInput
                 style={styles.input}

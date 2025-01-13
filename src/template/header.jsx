@@ -168,12 +168,15 @@ const Header = ({Value, profile, userName, userId}) => {
           </View>
         </TouchableOpacity>
       </View>
-
-      <TouchableOpacity
-        onPress={() => setIsModalVisible(true)}
-        style={styles.noti}>
-        <Noti name={'bell-o'} size={20} color={'#ffffff'} />
-      </TouchableOpacity>
+      {(jobOption === 'Employee' || jobOption === 'Entrepreneur' || jobOption === 'Freelancer') && (
+        <>
+          <TouchableOpacity
+            onPress={() => setIsModalVisible(true)}
+            style={styles.noti}>
+            <Noti name={'bell-o'} size={20} color={'#ffffff'} />
+          </TouchableOpacity>
+        </>
+      )}
       {/* Right Section - Menu Button */}
       <TouchableOpacity style={styles.menuButton} onPress={toggleMenu}>
         <Menu name="menufold" size={28} color="#ffffff" />
