@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import {
   View,
   TextInput,
@@ -180,7 +180,7 @@ const LoginScreen = () => {
               await AsyncStorage.setItem('firstName',firstName);
 
               // Navigate based on jobOption
-              if (jobOption === 'Employer' || jobOption === 'Investor' || jobOption === 'Freelancer') {
+              if (jobOption === 'Employee' || jobOption === 'Entrepreneur' || jobOption === 'Freelancer') {
                 console.log('Navigating to HomeScreen...');
                 navigation.navigate('home1', {
                   firstName,
@@ -189,8 +189,8 @@ const LoginScreen = () => {
                   userId,
                 });
               } else if (
-                jobOption === 'Employee' ||
-                jobOption === 'Entrepreneur'
+                jobOption === 'Employer' ||
+                jobOption === 'Investor'
               ) {
                 console.log('Navigating to home1...');
                 navigation.navigate('HomeScreen', {

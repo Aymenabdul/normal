@@ -300,6 +300,21 @@ public class VideoService {
         return video.getTranscription();
     }
 
+    // Fetch transcription of a video by videoId
+public String getTranscriptionByVideoId(Long videoId) {
+    // Fetch the video by its ID
+    Optional<Video> videoOptional = videoRepository.findById(videoId);
+
+    if (videoOptional.isEmpty()) {
+        throw new IllegalArgumentException("Video not found for the given ID");
+    }
+
+    Video video = videoOptional.get();
+    System.out.println("Fetched video transcription: " + video.getTranscription());
+    return video.getTranscription();
+}
+
+
     public Video updateTranscriptionByUserId(Long userId, String transcriptionContent) {
         // Fetch user by ID
         Optional<User> userOptional = userRepository.findById(userId);
@@ -489,4 +504,5 @@ public class VideoService {
                 .map(Video::getFilePath)
                 .orElse(null);
     }
+
 }

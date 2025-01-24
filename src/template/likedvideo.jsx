@@ -54,6 +54,9 @@ const HomeScreen = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [jobOption, setJobOption] = useState('');
   const [email, setEmail] = useState('');
+  const [currentTime, setCurrentTime] = useState(0);
+  const [subtitles, setSubtitles] = useState([]);
+  const [currentSubtitle, setCurrentSubtitle] = useState('');
 
   const handleGesture = event => {
     const {translationY} = event.nativeEvent;
@@ -572,6 +575,64 @@ const HomeScreen = () => {
     console.log('Video ID:', videoId); // Debugging: Check if videoId is passed correctly
     setVideoId(videoId);
     // Directly use videoId in the function
+
+    const activeSubtitle = subtitles.find(
+      subtitle =>
+        currentTime >= subtitle.startTime && currentTime <= subtitle.endTime,
+    );
+    console.log('Current Time:', currentTime);
+    console.log('Matching Subtitle:', activeSubtitle);
+    setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : '');
+
+    const parseTimeToSeconds = timeStr => {
+      const [hours, minutes, seconds] = timeStr.split(':');
+      const [sec, milli] = seconds.split(',');
+      return (
+        parseInt(hours, 10) * 3600 +
+        parseInt(minutes, 10) * 60 +
+        parseInt(sec, 10) +
+        parseInt(milli, 10) / 1000
+      );
+    };
+
+    const parseSRT = srtText => {
+      const lines = srtText.split('\n');
+      const parsedSubtitles = [];
+      let i = 0;
+
+      while (i < lines.length) {
+        if (lines[i].match(/^\d+$/)) {
+          const startEnd = lines[i + 1].split(' --> ');
+          const startTime = parseTimeToSeconds(startEnd[0]);
+          const endTime = parseTimeToSeconds(startEnd[1]);
+          let text = '';
+          i += 2;
+          while (i < lines.length && lines[i].trim() !== '') {
+            text += lines[i] + '\n';
+            i++;
+          }
+          parsedSubtitles.push({startTime, endTime, text: text.trim()});
+        } else {
+          i++;
+        }
+      }
+      return parsedSubtitles;
+    };
+
+    const fetchSubtitles = async () => {
+      try {
+        const subtitlesUrl = `${env.baseURL}/api/videos/user/${videoId}/subtitles.srt`;
+        const response = await fetch(subtitlesUrl);
+        const text = await response.text();
+        console.log('Fetched Subtitles:', text); // Debug log
+        const parsedSubtitles = parseSRT(text);
+        console.log('Parsed Subtitles:', parsedSubtitles); // Debug log
+        setSubtitles(parsedSubtitles);
+      } catch (error) {
+        console.error('Error fetching subtitles:', error);
+      }
+    };
+
     try {
       // Fetch user details by videoId
       const response = await axios.get(
@@ -602,6 +663,7 @@ const HomeScreen = () => {
       setSelectedVideoUri(uri);
       fetchPhoneNumber(videoId);
       fetchUserDetails(videoId);
+      fetchSubtitles(videoId);
       setIsModalVisible(true);
       console.log('Modal should now be visible');
     }
@@ -706,6 +768,19 @@ const HomeScreen = () => {
                     onError={error =>
                       console.error('Video playback error:', error)
                     }
+                    onProgress={({currentTime}) => {
+                      setCurrentTime(currentTime); // Update the current playback time
+                      const activeSubtitle = subtitles.find(
+                        subtitle =>
+                          currentTime >= subtitle.startTime &&
+                          currentTime <= subtitle.endTime,
+                      );
+                      console.log('Current Time:', currentTime);
+                      console.log('Active Subtitle:', activeSubtitle);
+                      setCurrentSubtitle(
+                        activeSubtitle ? activeSubtitle.text : '',
+                      );
+                    }}
                   />
                   <TouchableOpacity
                     onPress={() => navigation.navigate('Trending')}
@@ -771,6 +846,17 @@ const HomeScreen = () => {
                       </View>
                     </>
                   )}
+                  <View style={styles.subtitle}>
+                    <Text
+                      style={{
+                        color: '#ffffff',
+                        fontSize: 18,
+                        textAlign: 'center',
+                        fontWeight: 800,
+                      }}>
+                      {currentSubtitle}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -938,6 +1024,13 @@ const styles = StyleSheet.create({
     top: 0,
     fontWeight: '900',
     color: '#ffffff',
+  },
+  subtitle: {
+    position: 'absolute',
+    right:100,
+    width:200,
+    padding:10,
+    bottom: 155,
   },
 });
 

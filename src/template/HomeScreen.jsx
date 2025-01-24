@@ -33,6 +33,8 @@ import {
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {log} from 'console';
+import {subtle} from 'crypto';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -53,65 +55,11 @@ const HomeScreen = () => {
   const [phoneNumber, setPhoneNumber] = useState(null); // To store owner's phone number
   const [currentIndex, setCurrentIndex] = useState(0);
   const [email, setEmail] = useState('');
-  const [transcription, setTranscription] = useState();
   const [currentTime, setCurrentTime] = useState(0);
   const [subtitles, setSubtitles] = useState([]);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
-  const subtitlesUrl = `${env.baseURL}/api/videos/${userId}/subtitles.srt`;
-
-  const parseTimeToSeconds = timeStr => {
-    const [hours, minutes, seconds] = timeStr.split(':');
-    const [sec, milli] = seconds.split(',');
-    return (
-      parseInt(hours, 10) * 3600 +
-      parseInt(minutes, 10) * 60 +
-      parseInt(sec, 10) +
-      parseInt(milli, 10) / 1000
-    );
-  };
-
-  useEffect(() => {
-    const activeSubtitle = subtitles.find(
-      subtitle =>
-        currentTime >= subtitle.startTime && currentTime <= subtitle.endTime,
-    );
-    setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : '');
-  }, [currentTime, subtitles]);
-
-  useEffect(() => {
-    const parseSRT = srtText => {
-      const lines = srtText.split('\n');
-      const parsedSubtitles = [];
-      let i = 0;
-
-      while (i < lines.length) {
-        if (lines[i].match(/\d+/)) {
-          const startEnd = lines[i + 1].split(' --> ');
-          const startTime = parseTimeToSeconds(startEnd[0]);
-          const endTime = parseTimeToSeconds(startEnd[1]);
-          const text = lines[i + 2];
-          parsedSubtitles.push({startTime, endTime, text});
-          i += 4;
-        } else {
-          i++;
-        }
-      }
-
-      return parsedSubtitles;
-    };
-
-    const fetchSubtitles = async () => {
-      try {
-        const response = await fetch(subtitlesUrl);
-        const text = await response.text();
-        const parsedSubtitles = parseSRT(text);
-        setSubtitles(parsedSubtitles);
-      } catch (error) {
-        console.error('Error fetching subtitles:', error);
-      }
-    };
-    fetchSubtitles();
-  }, [subtitlesUrl]);
+  const defaultProfileImageUrl = require('./assets/defaultpropic.png');
+  const DefaultName = 'User';
 
   const handleGesture = event => {
     const {translationY} = event.nativeEvent;
@@ -206,10 +154,6 @@ const HomeScreen = () => {
   };
 
   useEffect(() => {
-    console.log('selectedVideoUri:', selectedVideoUri);
-    console.log('currentIndex:', currentIndex);
-    console.log('videosToDisplay:', videourl);
-
     if (
       selectedVideoUri &&
       currentIndex >= 0 &&
@@ -266,8 +210,8 @@ const HomeScreen = () => {
           // Convert profile image to Base64 if necessary
           const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
           // Update the modal with the fetched data
-          setModalFirstName(fetchedFirstName || 'Default Name');
-          setModalProfileImage(base64Image || 'defaultProfileImageUrl');
+          setModalFirstName(fetchedFirstName || DefaultName);
+          setModalProfileImage(base64Image || defaultProfileImageUrl);
         } catch (error) {
           console.error('Error fetching user details:', error);
 
@@ -280,7 +224,6 @@ const HomeScreen = () => {
 
       // Fetch phone number for the current video
       const fetchPhoneNumber = async () => {
-        console.log('Fetching phone number for videoId:', videoId);
         try {
           const response = await axios.get(
             `${env.baseURL}/api/videos/getOwnerByVideoId/${videoId}`,
@@ -288,7 +231,6 @@ const HomeScreen = () => {
           if (response.data && response.data.phoneNumber) {
             setPhoneNumber(response.data.phoneNumber);
             setEmail(response.data.email);
-            console.log('Phone number found:', response.data);
           } else {
             Alert.alert(
               'Error',
@@ -309,7 +251,13 @@ const HomeScreen = () => {
       fetchLikeCount(); // Fetch like count for the current video
       fetchUserDetails(); // Fetch user details for the current video
     }
-  }, [selectedVideoUri, currentIndex, videourl, userId]); // Dependencies
+  }, [
+    selectedVideoUri,
+    currentIndex,
+    videourl,
+    userId,
+    defaultProfileImageUrl,
+  ]); // Dependencies
 
   useEffect(() => {
     const loadDataFromStorage = async () => {
@@ -360,15 +308,12 @@ const HomeScreen = () => {
   };
 
   const fetchPhoneNumber = () => {
-    console.log('Fetching phone number for videoId:', videoId); // Log videoId to ensure it's correct
     axios
       .get(`${env.baseURL}/api/videos/getOwnerByVideoId/${videoId}`)
       .then(response => {
         if (response.data && response.data.phoneNumber) {
           setPhoneNumber(response.data.phoneNumber);
           setEmail(response.data.email);
-          console.log(response.data.phoneNumber);
-          console.log('Phone number found:', response.data.phoneNumber); // Log the phone number
         } else {
           Alert.alert('Error', 'Owner not found or no phone number available.');
         }
@@ -393,7 +338,6 @@ const HomeScreen = () => {
       console.log('No phone number, fetching phone number...'); // Log that we're fetching the phone number
     }
   };
-
   // Function to send a WhatsApp message
   const sendEmail = () => {
     console.log('sendEmail function called', email); // Log when the function is called
@@ -404,11 +348,6 @@ const HomeScreen = () => {
       const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(
         subject,
       )}&body=${encodeURIComponent(body)}`;
-
-      console.log('Email Address:', email); // Log the email address
-      console.log('Email Subject:', subject); // Log the email subject
-      console.log('Email Body:', body); // Log the email body
-      console.log('Constructed Mailto URL:', mailtoUrl); // Log the constructed mailto URL
 
       Linking.openURL(mailtoUrl).catch(err => {
         console.error('Error sending email:', err);
@@ -473,7 +412,6 @@ const HomeScreen = () => {
         if (!response.ok) {
           throw new Error(`Failed to fetch videos: ${response.statusText}`);
         }
-
         // Directly parse JSON without additional checks
         const videoData = await response.json();
 
@@ -484,11 +422,11 @@ const HomeScreen = () => {
           setHasVideo(false);
           return;
         }
-
         // Process video data in a single pass and update state
         const videoURIs = videoData.reduce((acc, video) => {
           acc.push({
             id: video.id,
+            userId: video.userId,
             title: video.title || 'Untitled Video',
             uri: `${env.baseURL}/api/videos/user/${video.userId}`,
           });
@@ -497,8 +435,6 @@ const HomeScreen = () => {
 
         setVideoUrl(videoURIs);
         setHasVideo(true);
-
-        console.log('Video Data Processed:', videoURIs); // Log processed data
       } catch (error) {
         console.error('Error fetching videos:', error);
         setHasVideo(false);
@@ -508,24 +444,6 @@ const HomeScreen = () => {
     };
     fetchVideos();
   }, [userId, videoId]);
-
-  const fetchTranscription = async () => {
-    console.log('====================================');
-    console.log('trans userID', userId);
-    console.log('====================================');
-    try {
-      const response = await axios.get(
-        `${env.baseURL}/api/videos/${userId}/transcription`,
-      );
-      if (response.data.transcription) {
-        const fetchedTranscription = response.data.transcription;
-        setTranscription(fetchedTranscription);
-      } else {
-      }
-    } catch (error) {
-      console.error('Error fetching transcription:', error.message);
-    }
-  };
 
   const fetchLikeCount = () => {
     axios
@@ -632,8 +550,8 @@ const HomeScreen = () => {
       const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
 
       // Update the modal with the fetched data
-      setModalFirstName(fetchedFirstName || 'Default Name');
-      setModalProfileImage(base64Image || 'defaultProfileImageUrl');
+      setModalFirstName(fetchedFirstName || DefaultName);
+      setModalProfileImage(base64Image || defaultProfileImageUrl);
     } catch (error) {
       console.error('Error fetching user details:', error);
 
@@ -645,43 +563,87 @@ const HomeScreen = () => {
   };
 
   const openModal = async (uri, videoId, index) => {
-    console.log('Video ID:', videoId); // Debugging: Check if videoId is passed correctly
     setVideoId(videoId);
     setCurrentIndex(index);
-    // Directly use videoId in the function
+
+    const activeSubtitle = subtitles.find(
+      subtitle =>
+        currentTime >= subtitle.startTime && currentTime <= subtitle.endTime,
+    );
+    console.log('Current Time:', currentTime);
+    console.log('Matching Subtitle:', activeSubtitle);
+    setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : '');
+
+    const parseTimeToSeconds = timeStr => {
+      const [hours, minutes, seconds] = timeStr.split(':');
+      const [sec, milli] = seconds.split(',');
+      return (
+        parseInt(hours, 10) * 3600 +
+        parseInt(minutes, 10) * 60 +
+        parseInt(sec, 10) +
+        parseInt(milli, 10) / 1000
+      );
+    };
+
+    const parseSRT = srtText => {
+      const lines = srtText.split('\n');
+      const parsedSubtitles = [];
+      let i = 0;
+
+      while (i < lines.length) {
+        if (lines[i].match(/^\d+$/)) {
+          const startEnd = lines[i + 1].split(' --> ');
+          const startTime = parseTimeToSeconds(startEnd[0]);
+          const endTime = parseTimeToSeconds(startEnd[1]);
+          let text = '';
+          i += 2;
+          while (i < lines.length && lines[i].trim() !== '') {
+            text += lines[i] + '\n';
+            i++;
+          }
+          parsedSubtitles.push({startTime, endTime, text: text.trim()});
+        } else {
+          i++;
+        }
+      }
+      return parsedSubtitles;
+    };
+
+    const fetchSubtitles = async () => {
+      try {
+        const subtitlesUrl = `${env.baseURL}/api/videos/user/${videoId}/subtitles.srt`;
+        const response = await fetch(subtitlesUrl);
+        const text = await response.text();
+        console.log('Fetched Subtitles:', text); // Debug log
+        const parsedSubtitles = parseSRT(text);
+        console.log('Parsed Subtitles:', parsedSubtitles); // Debug log
+        setSubtitles(parsedSubtitles);
+      } catch (error) {
+        console.error('Error fetching subtitles:', error);
+      }
+    };
+
     try {
-      // Fetch user details by videoId
       const response = await axios.get(
         `${env.baseURL}/api/videos/user/${videoId}/details`,
       );
 
-      const {firstName: fetchedFirstName, profileImage: fetchedProfileImage} =
-        response.data;
-
-      // Convert profile image to Base64 with the correct MIME type prefix
-      const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
-
-      // Set modal-specific states
-      setModalFirstName(fetchedFirstName);
+      const {firstName, profileImage} = response.data;
+      const base64Image = `data:image/jpeg;base64,${profileImage}`;
+      setModalFirstName(firstName);
       setModalProfileImage(base64Image);
     } catch (error) {
       console.error('Error fetching user details:', error);
-
-      // Reset on error to prevent showing stale data
       setModalFirstName('');
       setModalProfileImage(null);
     } finally {
-      // Make sure to use the passed videoId here for fetching like count and status
       fetchLikeCount();
       fetchLikeStatus();
-
-      // Set selected video URI and show the modal
-      setSelectedVideoUri(uri);
       fetchPhoneNumber(videoId);
-      fetchTranscription();
       fetchUserDetails();
+      setSelectedVideoUri(uri);
+      fetchSubtitles(videoId);
       setIsModalVisible(true);
-      console.log('Modal should now be visible');
     }
   };
 
@@ -770,14 +732,30 @@ const HomeScreen = () => {
             <View style={styles.modalContainer}>
               <View style={styles.modalContent}>
                 <View style={styles.userDetails}>
-                  {modalProfileImage && (
+                  {modalProfileImage ? (
+                    // Check if the profile image is a string (Base64 or URL)
+                    typeof modalProfileImage === 'string' ? (
+                      <Image
+                        source={{uri: modalProfileImage}} // Base64 or remote image
+                        style={styles.profileImage}
+                      />
+                    ) : (
+                      <Image
+                        source={modalProfileImage} // Local image from require()
+                        style={styles.profileImage}
+                      />
+                    )
+                  ) : (
                     <Image
-                      source={{uri: modalProfileImage}}
+                      source={require('./assets/defaultpropic.png')} // Fallback image
                       style={styles.profileImage}
                     />
                   )}
-                  <Text style={styles.userName}>{modalFirstName}</Text>
+                  <Text style={styles.userName}>
+                    {modalFirstName || 'User'}
+                  </Text>
                 </View>
+
                 <View style={styles.fullScreen}>
                   <Video
                     source={{uri: selectedVideoUri}}
@@ -787,8 +765,20 @@ const HomeScreen = () => {
                     onError={error =>
                       console.error('Video playback error:', error)
                     }
+                    onProgress={({currentTime}) => {
+                      setCurrentTime(currentTime); // Update the current playback time
+                      const activeSubtitle = subtitles.find(
+                        subtitle =>
+                          currentTime >= subtitle.startTime &&
+                          currentTime <= subtitle.endTime,
+                      );
+                      console.log('Current Time:', currentTime);
+                      console.log('Active Subtitle:', activeSubtitle);
+                      setCurrentSubtitle(
+                        activeSubtitle ? activeSubtitle.text : '',
+                      );
+                    }}
                   />
-                  <Text style={styles.subtitle}>{currentSubtitle}</Text>
                   <TouchableOpacity
                     onPress={() => navigation.navigate('Trending')}
                     style={styles.trending1}>
@@ -845,6 +835,17 @@ const HomeScreen = () => {
                           color={'#ffffff'}
                         />
                       </TouchableOpacity>
+                    </View>
+                    <View style={styles.subtitle}>
+                      <Text
+                        style={{
+                          color: '#ffffff',
+                          fontSize: 18,
+                          textAlign: 'center',
+                          fontWeight: 800,
+                        }}>
+                        {currentSubtitle}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -1018,6 +1019,13 @@ const styles = StyleSheet.create({
     top: 0,
     fontWeight: '900',
     color: '#ffffff',
+  },
+  subtitle: {
+    position: 'absolute',
+    right: 100,
+    width: 200,
+    padding: 10,
+    bottom: 155,
   },
 });
 

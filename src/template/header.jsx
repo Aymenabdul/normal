@@ -10,6 +10,7 @@ import {
   Dimensions,
   Modal,
   FlatList,
+  Linking,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import User from 'react-native-vector-icons/FontAwesome';
@@ -19,6 +20,7 @@ import Video from 'react-native-vector-icons/Foundation';
 import Faq from 'react-native-vector-icons/AntDesign';
 import Logout from 'react-native-vector-icons/AntDesign';
 import Noti from 'react-native-vector-icons/FontAwesome';
+import Privacy from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const {width} = Dimensions.get('window');
@@ -123,6 +125,11 @@ const Header = ({Value, profile, userName, userId}) => {
     } catch (error) {
       console.error('Error saving notifications:', error);
     }
+  };
+
+  const openPrivacyPolicy = () => {
+    const url = 'https://wezume.com/privacy-policy/';
+    Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
   };
 
   // Clear all notifications
@@ -243,6 +250,12 @@ const Header = ({Value, profile, userName, userId}) => {
             <TouchableOpacity onPress={logouts}>
               <Text style={styles.options}>
                 <Logout name={'logout'} size={20} color={'grey'} /> Logout
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.line}></View>
+            <TouchableOpacity onPress={openPrivacyPolicy}>
+              <Text style={styles.options}>
+                <Privacy name={'privacy-tip'} size={20} color={'grey'} /> Privacy Policy
               </Text>
             </TouchableOpacity>
             <View style={styles.line}></View>

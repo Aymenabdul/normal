@@ -10,7 +10,7 @@ import {
   BackHandler,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {useIsFocused, useNavigation, useRoute} from '@react-navigation/native';
+import {useIsFocused, useNavigation} from '@react-navigation/native';
 import Header from './header';
 import axios from 'axios';
 import {Buffer} from 'buffer';
@@ -37,7 +37,6 @@ const Home1 = () => {
   const [subtitles, setSubtitles] = useState([]);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
   const [videoId, setVideoId] = useState();
-  const [transcription, setTranscription] = useState('');
   const [isVideoVisible, setIsVideoVisible] = useState(true);
 
   const subtitlesUrl = `${env.baseURL}/api/videos/${userId}/subtitles.srt`;
@@ -121,7 +120,7 @@ const Home1 = () => {
       }
     };
     fetchSubtitles(userId);
-  }, [subtitlesUrl,userId]);
+  }, [subtitlesUrl, userId]);
 
   // Fetch profile image
   const fetchProfilePic = async userId => {
@@ -160,20 +159,90 @@ const Home1 = () => {
         headers: {
           Range: rangeHeader,
         },
-        responseType: 'arraybuffer',
       });
+
       if (!response.ok) {
         throw new Error('Failed to fetch video');
       }
-      const videoUril = `${env.baseURL}/api/videos/user/${userId}`;
-      setVideoUri(videoUril);
-      setHasVideo(true); // Set to true if video is available
+
+      // Get the video URL if available
+      const videoUri = `${env.baseURL}/api/videos/user/${userId}`;
+
+      // Now check for profanity
+      const videoResponse = await fetch(
+        `${env.baseURL}/api/videos/check-profane`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            file: videoUri, // Send the video URI in the body
+          }),
+        },
+      );
+
+      // Log the response status
+      console.log('Profanity check response status:', videoResponse.status);
+
+      if (videoResponse.status === 403) {
+        // Profanity detected, log it and show an alert or message
+        console.log('Profanity detected in the video');
+
+        Alert.alert(
+          'Video unavailable',
+          'This video contains inappropriate content and cannot be viewed.',
+          [
+            {
+              text: 'Delete',
+              onPress: () => {
+                deleVideo(userId);
+                console.log('Video deleted');
+                // Set the necessary states after deletion
+                setHasVideo(false); // Hide the video
+                setIsVideoVisible(false); // Set the video visibility to false
+              },
+              style: 'destructive', // This makes the button red
+            },
+          ],
+          {cancelable: false}, // Prevents dismissing the alert by tapping outside
+        );
+      } else {
+        // Log that no profanity was found
+        console.log('No profanity detected in the video');
+
+        // Set video URL and make it visible if no profanity is detected
+        setVideoUri(videoUri);
+        setHasVideo(true);
+        setIsVideoVisible(true);
+      }
     } catch (error) {
-      Alert('Welcome , you can now start recording the video');
-      setHasVideo(false); // Set to false if no video is available
+      // Log the error message
+      console.log('Error occurred:', error);
+      Alert.alert('Error', 'An error occurred while fetching the video.');
+      setHasVideo(false);
+      setIsVideoVisible(false);
     } finally {
       setLoading(false);
     }
+  };
+
+  const deleVideo = async userId => {
+              const response = await fetch(
+                `${env.baseURL}/api/videos/delete/${userId}`,
+                {
+                  method: 'DELETE',
+                },
+              );
+
+              if (!response.ok) {
+                throw new Error('Failed to delete video');
+              }
+
+              const message = await response.text();
+              console.log(message); // "Video deleted successfully for userId: <userId>"
+              setHasVideo(false); // Hide the + icon when video is deleted
+              setVideoUri(null); // Clear the video URI
   };
 
   // Delete video
@@ -217,7 +286,6 @@ const Home1 = () => {
       {cancelable: false}, // Prevent dismissing by tapping outside the alert
     );
   };
-
 
   const shareOption = async () => {
     const share = {
@@ -324,7 +392,6 @@ const Home1 = () => {
         // Call functions to fetch additional data (profile picture, video, etc.)
         fetchProfilePic(apiUserId);
         fetchVideo(apiUserId);
-        fetchTranscription(apiUserId);
 
         // Log the videoId after setting it
         console.log('Retrieved videoId from AsyncStorage:', parsedVideoId);
@@ -334,38 +401,6 @@ const Home1 = () => {
     };
 
     loadDataFromStorage();
-
-    const filter = new Filter(); // Initialize the bad-words filter
-    const fetchTranscription = async userId => {
-      console.log('====================================');
-      console.log('trans userId ',userId);
-      console.log('====================================');
-      try {
-        const response = await axios.get(
-          `${env.baseURL}/api/videos/${userId}/transcription`,
-        );
-        if (response.data.transcription) {
-          const fetchedTranscription = response.data.transcription;
-          setTranscription(fetchedTranscription);
-
-          // Check for profanity in the transcription
-          const cleanText = filter.clean(fetchedTranscription);
-
-          // If profanity is detected (cleanText is different from original transcription), hide or blur the video
-          if (cleanText !== fetchedTranscription) {
-            console.log('Profanity detected! Hiding or blurring the video.');
-            setIsVideoVisible(false); // Hide the video if profanity is detected
-          } else {
-            console.log('No profanity detected.');
-            setIsVideoVisible(true); // Show the video if no profanity is detected
-          }
-        } else {
-        }
-      } catch (error) {
-        console.error('Error fetching transcription:', error.message);
-      }
-    };
-
   }, [userId]); // Empty dependency array means this effect runs once when the component mounts
 
   return (
@@ -390,8 +425,8 @@ const Home1 = () => {
           }}>
           {loading ? (
             <ActivityIndicator size="large" color="#000" />
-          ) : videoUri && isVideoVisible ? (
-            // Show the video if it's visible
+          ) : isVideoVisible && videoUri ? (
+            // Show the video if it's visible and there's a video URL
             <TouchableOpacity
               onPress={() => setModalVisible(true)}
               style={{
@@ -410,17 +445,18 @@ const Home1 = () => {
               <Text style={styles.subtitle}>{currentSubtitle}</Text>
             </TouchableOpacity>
           ) : !hasVideo ? (
-            // Show a message if there is no video to upload
+            // Show a message if no video is available
             <Text style={styles.noVideoText}>
               No video available. You need to upload a video.
             </Text>
           ) : (
-            // Show a message if the video is hidden due to inappropriate language
+            // Show a message if the video is hidden due to profanity
             <Text style={styles.noVideoText}>
               Video is hidden due to inappropriate language. You need to delete
               the video and upload again.
             </Text>
           )}
+
           {/* Conditionally render the + icon */}
           {!hasVideo && (
             <TouchableOpacity
@@ -610,7 +646,7 @@ const styles = StyleSheet.create({
   subtitle: {
     bottom: '25%',
     color: 'white',
-    fontSize:16,
+    fontSize: 16,
     padding: 5,
     textAlign: 'center',
     zIndex: 10,

@@ -2,7 +2,11 @@
 package com.example.vprofile;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -31,6 +35,9 @@ public class VideoController {
     private final FFmpegService ffmpegService;
 
     @Autowired
+    private VideoProcessingService videoProcessingService;
+
+    @Autowired
     private VideoRepository videoRepository;
 
     @Autowired
@@ -45,13 +52,11 @@ public class VideoController {
     @Autowired
     private NotificationService notificationService;
 
-    private  VideoProfanityService videoProfanityService;
 
     @Autowired
-    public VideoController(FFmpegService ffmpegService, VideoService videoService,VideoProfanityService videoProfanityService) {
+    public VideoController(FFmpegService ffmpegService, VideoService videoService) {
         this.ffmpegService = ffmpegService;
         this.videoService = videoService;
-        this.videoProfanityService = videoProfanityService;
     }
 
 
@@ -83,6 +88,7 @@ public class VideoController {
     public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
     }
+
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<InputStreamResource> streamUserVideo(
@@ -233,6 +239,43 @@ public ResponseEntity<Resource> generateSRTForUser(@PathVariable Long userId) {
                 .body(null);
     }
 }
+
+@GetMapping("user/{videoId}/subtitles.srt")
+public ResponseEntity<Resource> generateSRTForVideo(@PathVariable Long videoId) {
+    try {
+        System.out.println("Starting SRT generation for video ID: " + videoId);
+
+        // Fetch transcription for the video
+        String transcription = videoService.getTranscriptionByVideoId(videoId);
+        System.out.println("Transcription fetched for video ID " + videoId + ": " + transcription);
+
+        if (transcription == null || transcription.isEmpty()) {
+            System.out.println("No transcription found for video ID: " + videoId);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(null);
+        }
+
+        // Split transcription and generate SRT
+        String srtContent = videoService.generateSRT(transcription);
+        System.out.println("Generated SRT content for video ID " + videoId + ": " + srtContent);
+
+        // Serve SRT as downloadable file
+        ByteArrayResource resource = new ByteArrayResource(srtContent.getBytes());
+        System.out.println("Returning SRT file for video ID: " + videoId);
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=subtitles.srt")
+                .contentType(MediaType.parseMediaType("application/x-subrip"))
+                .body(resource);
+    } catch (Exception e) {
+        System.out.println("Error occurred while generating SRT for video ID: " + videoId);
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(null);
+    }
+}
+
+
 @PostMapping("/filter")
 public ResponseEntity<List<Map<String, Object>>> filterVideos(@RequestBody User user) {
     // Log the incoming request data
@@ -290,20 +333,33 @@ public ResponseEntity<List<Map<String, Object>>> filterVideos(@RequestBody User 
 
 
 @GetMapping("/user/{videoId}/details")
-    public ResponseEntity<Map<String, String>> getUserDetailsByVideoId(@PathVariable Long videoId) {
-        Optional<Video> video = videoRepository.findById(videoId);
-        if (video.isPresent()) {
-            Long userId = video.get().getUserId();
-            Optional<User> user = userRepository.findById(userId);
-            if (user.isPresent()) {
-                Map<String, String> userDetails = new HashMap<>();
-                userDetails.put("firstName", user.get().getFirstName());
-                userDetails.put("profileImage", Base64.getEncoder().encodeToString(user.get().getProfilePic()));
-                return ResponseEntity.ok(userDetails);
-            }
+public ResponseEntity<Map<String, String>> getUserDetailsByVideoId(@PathVariable Long videoId) {
+    Optional<Video> video = videoRepository.findById(videoId);
+    if (video.isPresent()) {
+        Long userId = video.get().getUserId();
+        Optional<User> user = userRepository.findById(userId);
+        if (user.isPresent()) {
+            Map<String, String> userDetails = new HashMap<>();
+            User userEntity = user.get();
+
+            // Handle null fields safely
+            userDetails.put("firstName", Optional.ofNullable(userEntity.getFirstName()).orElse(""));
+            userDetails.put("userId", Optional.ofNullable(userEntity.getId()).map(String::valueOf).orElse(""));
+
+            // Safely handle the profilePic field
+            byte[] profilePic = userEntity.getProfilePic();
+            String profileImageBase64 = (profilePic != null) 
+                ? Base64.getEncoder().encodeToString(profilePic) 
+                : ""; // Return empty string if profilePic is null
+            userDetails.put("profileImage", profileImageBase64);
+
+            return ResponseEntity.ok(userDetails);
         }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+}
+
+
     @PostMapping("/{videoId}/like")
     public ResponseEntity<String> likeVideo(
         @PathVariable Long videoId,
@@ -526,29 +582,61 @@ public ResponseEntity<?> getTrendingVideos() {
     return ResponseEntity.ok(videoResponses);
 }
 
-    @PostMapping("/check-profanity")
-    public ResponseEntity<Map<String, Object>> checkProfanity(@RequestParam("userId") Long userId, @RequestParam("videoId") Long videoId) {
-        Map<String, Object> response = new HashMap<>();
-        try {
-            User user = userService.getUserById(userId);
-            if (user == null) {
-                response.put("error", "Invalid User ID");
-                return ResponseEntity.badRequest().body(response);
-            }
-
-            String videoPath = videoService.getVideoPathById(videoId);
-            if (videoPath == null || videoPath.isEmpty()) {
-                response.put("error", "Invalid Video ID");
-                return ResponseEntity.badRequest().body(response);
-            }
-
-            Boolean isOffensive = videoProfanityService.analyzeVideo(userId, videoId, videoPath);
-            response.put("containsProfanity", isOffensive);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            e.printStackTrace();
-            response.put("error", "Error analyzing video");
-            return ResponseEntity.status(500).body(response);
-        }
+@PostMapping("/check-profane")
+public ResponseEntity<?> checkForProfanity(@RequestBody Map<String, String> request) {
+    String videoUri = request.get("file");  // The 'file' key should be part of the request body
+    if (videoUri == null || videoUri.isEmpty()) {
+        return ResponseEntity.badRequest().body("Video URI is empty");
     }
+
+    try {
+        // Log the incoming URI
+        System.out.println("Received video URI: " + videoUri);
+
+        // Download the video from the URI
+        URL url = new URL(videoUri);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+
+        // Log the response code
+        int responseCode = connection.getResponseCode();
+        System.out.println("Response Code: " + responseCode);
+
+        // Check if the connection was successful
+        if (responseCode != 200) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Unable to fetch the video from the provided URI.");
+        }
+
+        // Save the video to a temporary file
+        File tempVideo = File.createTempFile("downloaded-video", ".mp4");
+        try (InputStream inputStream = connection.getInputStream();
+             FileOutputStream fileOutputStream = new FileOutputStream(tempVideo)) {
+
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                fileOutputStream.write(buffer, 0, bytesRead);
+            }
+
+            // Log the temporary file path
+            System.out.println("Saved video to temporary file: " + tempVideo.getAbsolutePath());
+        }
+
+        // Check for visual profanity
+        boolean hasProfanity = videoProcessingService.checkForVisualProfanity(tempVideo.getAbsolutePath());
+
+        // Log profanity detection result
+        if (hasProfanity) {
+            System.out.println("Profanity detected in the video.");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Profanity detected in the video.");
+        } else {
+            System.out.println("No profanity found in the video.");
+            return ResponseEntity.ok("No profanity found in the video.");
+        }
+    } catch (Exception e) {
+        System.out.println("Error during video processing: " + e.getMessage());
+        return ResponseEntity.status(500).body("Error processing video: " + e.getMessage());
+    }
+}
+
 };

@@ -3,6 +3,9 @@ package com.example.vprofile;
 import java.io.File;
 import java.nio.file.Files;
 
+import org.springframework.stereotype.Component;
+
+@Component
 public class FrameExtractor {
 
     public String extractFrames(String videoPath) throws Exception {

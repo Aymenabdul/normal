@@ -1,10 +1,10 @@
 // env.js
 const ENV = {
   dev: {
-    baseURL: 'http://89.116.134.110:8081',
+    baseURL: 'http://wezume.in:8081',
   },
   prod: {
-    baseURL: 'http://89.116.134.110:8081',
+    baseURL: 'http://wezume.in:8081',
   },
 };
 
