@@ -412,11 +412,6 @@ const Filtered = ({route, navigation}) => {
         subject,
       )}&body=${encodeURIComponent(body)}`;
 
-      console.log('Email Address:', email); // Log the email address
-      console.log('Email Subject:', subject); // Log the email subject
-      console.log('Email Body:', body); // Log the email body
-      console.log('Constructed Mailto URL:', mailtoUrl); // Log the constructed mailto URL
-
       Linking.openURL(mailtoUrl).catch(err => {
         console.error('Error sending email:', err);
         Alert.alert(
@@ -640,6 +635,7 @@ const Filtered = ({route, navigation}) => {
                   source={{uri: item.uri}}
                   style={styles.videoPlayer}
                   resizeMode="contain"
+                  muted={true}
                   onError={error =>
                     console.error('Video playback error:', error)
                   }

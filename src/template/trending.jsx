@@ -755,6 +755,7 @@ const HomeScreen = () => {
               <Video
                 source={{uri: item.uri}}
                 style={styles.videoPlayer}
+                muted={true}
                 resizeMode="contain"
                 onError={error => console.error('Video playback error:', error)}
               />

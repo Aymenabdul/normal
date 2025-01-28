@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ImageBackground,
   ScrollView,
+  Linking,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
@@ -204,6 +205,11 @@ const ProfileScreen = () => {
     }
   };
 
+  const DeleteLink = () => {
+      const url = 'https://wezume.com/delete/';
+      Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
+    };
+
   return (
     <>
       <ImageBackground
@@ -230,6 +236,9 @@ const ProfileScreen = () => {
         {/* Edit Profile Button */}
         <TouchableOpacity style={styles.editProfileButton} onPress={()=> navigation.navigate('Edit')}>
           <Text style={styles.editProfileText}>Edit Profile</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.editProfileButton} onPress={DeleteLink}>
+          <Text style={styles.editProfileText}>Delete Account</Text>
         </TouchableOpacity>
 
         <ScrollView

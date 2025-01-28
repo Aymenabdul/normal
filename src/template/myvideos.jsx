@@ -736,6 +736,7 @@ const Myvideos = () => {
                 source={{uri: item.uri}}
                 style={styles.videoPlayer}
                 resizeMode="contain"
+                muted={true}
                 onError={error => console.error('Video playback error:', error)}
               />
             </TouchableOpacity>
