@@ -293,7 +293,7 @@ const SignupScreen = () => {
       setLoading(false);
     }
   };
-  const checkIfEmailExists = async () => {
+  const checkIfEmailExists = async (email) => {
     console.log('Checking email:', email); // Log the email you're checking
     try {
       const response = await axios.post(
@@ -329,7 +329,7 @@ const SignupScreen = () => {
     }
   };
 
-  const checkIfPhoneExists = async () => {
+  const checkIfPhoneExists = async (phoneNumber) => {
     console.log('Checking phoneNumber:', phoneNumber);
     try {
       const response = await axios.post(
@@ -1162,7 +1162,7 @@ const styles = StyleSheet.create({
   },
   btn: {
     width: 150,
-    marginLeft: 100,
+    marginLeft:'27%',
     borderRadius: 10,
     elevation: 5,
     marginTop: 10,

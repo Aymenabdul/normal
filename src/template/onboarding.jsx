@@ -8,7 +8,7 @@ const OnboardingScreen = ({ navigation }) => {
     // Automatically navigate to the LoginScreen after 2 seconds
     const timer = setTimeout(() => {
       navigation.replace('LoginScreen');
-    }, 4000);
+    },2000);
 
     // Clear the timer if the component unmounts
     return () => clearTimeout(timer);

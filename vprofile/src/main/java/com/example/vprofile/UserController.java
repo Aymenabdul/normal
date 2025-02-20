@@ -135,5 +135,44 @@ public ResponseEntity<byte[]> getUserProfilePic(@PathVariable Long userId) {
             return ResponseEntity.ok(response);
         }
     }
+    @PutMapping("/update-password")
+    public ResponseEntity<String> updatePassword(@RequestParam String email, @RequestParam String newPassword) {
+        boolean isUpdated = userService.updatePasswordByEmail(email, newPassword);
+        if (isUpdated) {
+            return ResponseEntity.ok("Password updated successfully.");
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+        }
+    }
+
+    @GetMapping("/share")
+public ResponseEntity<String> handleDeepLink(@RequestParam String target) {
+    String fallbackUrlAndroid = "https://play.google.com/store/apps/details?id=com.vprofile";
+    String fallbackUrlIOS = "https://apps.apple.com/in/app/wezume/id6740565222 "; 
     
+    String htmlResponse = "<html><head>"
+        + "<script>"
+        + "  function openApp() {"
+        + "    window.location.href ='" + target + "'; "
+        + "    setTimeout(function() {"
+        + "        var userAgent = navigator.userAgent || navigator.vendor || window.opera;"
+        + "        if (/android/i.test(userAgent)) {"
+        + "          window.location.href = '" + fallbackUrlAndroid + "';"
+        + "        } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {"
+        + "          window.location.href = '" + fallbackUrlIOS + "';"
+        + "        }"
+        + "    }, 5000);"
+        + "  }"
+        + "  openApp();"
+        + "</script>"
+        + "</head><body>"
+        + "Redirecting..."
+        + "<p>If nothing happens, <a href='" + fallbackUrlAndroid + "'>click here to download the app</a>.</p>"
+        + "</body></html>";
+
+
+                System.out.println("htmlResponse: " + htmlResponse);
+
+    return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(htmlResponse);
+}
 }

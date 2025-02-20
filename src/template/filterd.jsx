@@ -52,7 +52,11 @@ const Filtered = ({route, navigation}) => {
   const [videoId, setVideoId] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState(null); // To store owner's phone number
   const {filteredVideos, isFiltered} = route.params || {};
-  const [email , setEmail] = useState('');
+  const [email, setEmail] = useState('');
+  const [currentTime, setCurrentTime] = useState(0);
+  const [subtitles, setSubtitles] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [currentSubtitle, setCurrentSubtitle] = useState('');
 
   const [currentIndex, setCurrentIndex] = useState(selectedVideoIndex);
 
@@ -246,33 +250,33 @@ const Filtered = ({route, navigation}) => {
       };
 
       // Function to send a WhatsApp message
-  const sendEmail = () => {
-    console.log('sendEmail function called'); // Log when the function is called
+      const sendEmail = () => {
+        console.log('sendEmail function called'); // Log when the function is called
 
-    if (email) {
-      const subject = 'Hello from My App'; // Customize your email subject
-      const body = `Hello, ${modalFirstName}, it's nice to connect with you.`; // Customize your email body
-      const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(
-        subject,
-      )}&body=${encodeURIComponent(body)}`;
+        if (email) {
+          const subject = 'Hello from My App'; // Customize your email subject
+          const body = `Hello, ${modalFirstName}, it's nice to connect with you.`; // Customize your email body
+          const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(
+            subject,
+          )}&body=${encodeURIComponent(body)}`;
 
-      console.log('Email Address:', email); // Log the email address
-      console.log('Email Subject:', subject); // Log the email subject
-      console.log('Email Body:', body); // Log the email body
-      console.log('Constructed Mailto URL:', mailtoUrl); // Log the constructed mailto URL
+          console.log('Email Address:', email); // Log the email address
+          console.log('Email Subject:', subject); // Log the email subject
+          console.log('Email Body:', body); // Log the email body
+          console.log('Constructed Mailto URL:', mailtoUrl); // Log the constructed mailto URL
 
-      Linking.openURL(mailtoUrl).catch(err => {
-        console.error('Error sending email:', err);
-        Alert.alert(
-          'Error',
-          'Failed to open email client. Make sure an email client is installed and configured on your device.',
-        );
-      });
-    } else {
-      console.log('No email address provided'); // Log if no email address is available
-      Alert.alert('Error', 'Email address is not available.');
-    }
-  };
+          Linking.openURL(mailtoUrl).catch(err => {
+            console.error('Error sending email:', err);
+            Alert.alert(
+              'Error',
+              'Failed to open email client. Make sure an email client is installed and configured on your device.',
+            );
+          });
+        } else {
+          console.log('No email address provided'); // Log if no email address is available
+          Alert.alert('Error', 'Email address is not available.');
+        }
+      };
 
       // Call the fetchPhoneNumber function
       fetchPhoneNumber(videoId);
@@ -281,7 +285,7 @@ const Filtered = ({route, navigation}) => {
       fetchLikeCount(videoId); // Fetch like count for the current video
       fetchUserDetails(videoId); // Fetch user details for the current video
     }
-  }, [selectedVideoUri, currentIndex, videourl, userId,email,modalFirstName]); // Dependencies
+  }, [selectedVideoUri, currentIndex, videourl, userId, email, modalFirstName]); // Dependencies
 
   useEffect(() => {
     const loadDataFromStorage = async () => {
@@ -336,15 +340,14 @@ const Filtered = ({route, navigation}) => {
   // Handle setting video URLs when filtered videos are passed
   useEffect(() => {
     if (filteredVideos.length > 0) {
-      setVideoUrl(filteredVideos); // Set the filtered videos directly
-      setHasVideo(true); // Ensure videos are displayed
+      setVideoUrl(filteredVideos);
+      setHasVideo(true);
     } else {
-      setVideoUrl([]); // No filtered videos, clear the state
-      setHasVideo(false); // Hide video display
+      setVideoUrl([]);
+      setHasVideo(false);
     }
-  }, [filteredVideos]); // Dependency on filteredVideos and isFiltered
+  }, [filteredVideos]);
   useEffect(() => {
-    // Assuming fetchFilteredVideos and fetchProfilePic are defined elsewhere
     const fetchFilteredVideos = async () => {
       try {
         // Logic to fetch all videos if not filtered
@@ -399,7 +402,6 @@ const Filtered = ({route, navigation}) => {
       console.log('No phone number, fetching phone number...'); // Log that we're fetching the phone number
     }
   };
-  
 
   // Function to send a WhatsApp message
   const sendEmail = () => {
@@ -539,10 +541,69 @@ const Filtered = ({route, navigation}) => {
     }
   };
 
-  const openModal = async (uri, videoId) => {
+  const openModal = async (uri, videoId,userId) => {
     console.log('Video ID:', videoId); // Debugging: Check if videoId is passed correctly
     setVideoId(videoId);
+    setSelectedUserId(userId);
     // Directly use videoId in the function
+
+    const activeSubtitle = subtitles.find(
+      subtitle =>
+        currentTime >= subtitle.startTime && currentTime <= subtitle.endTime,
+    );
+    console.log('Current Time:', currentTime);
+    console.log('Matching Subtitle:', activeSubtitle);
+    setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : '');
+
+    const parseTimeToSeconds = timeStr => {
+      const [hours, minutes, seconds] = timeStr.split(':');
+      const [sec, milli] = seconds.split(',');
+      return (
+        parseInt(hours, 10) * 3600 +
+        parseInt(minutes, 10) * 60 +
+        parseInt(sec, 10) +
+        parseInt(milli, 10) / 1000
+      );
+    };
+
+    const parseSRT = srtText => {
+      const lines = srtText.split('\n');
+      const parsedSubtitles = [];
+      let i = 0;
+
+      while (i < lines.length) {
+        if (lines[i].match(/^\d+$/)) {
+          const startEnd = lines[i + 1].split(' --> ');
+          const startTime = parseTimeToSeconds(startEnd[0]);
+          const endTime = parseTimeToSeconds(startEnd[1]);
+          let text = '';
+          i += 2;
+          while (i < lines.length && lines[i].trim() !== '') {
+            text += lines[i] + '\n';
+            i++;
+          }
+          parsedSubtitles.push({startTime, endTime, text: text.trim()});
+        } else {
+          i++;
+        }
+      }
+      return parsedSubtitles;
+    };
+
+    const fetchSubtitles = async () => {
+      try {
+        const subtitlesUrl = `${env.baseURL}/api/videos/user/${videoId}/subtitles.srt`;
+        const response = await fetch(subtitlesUrl);
+        const text = await response.text();
+        console.log('Fetched Subtitles:', text); // Debug log
+        const parsedSubtitles = parseSRT(text);
+        console.log('Parsed Subtitles:', parsedSubtitles); // Debug log
+        setSubtitles(parsedSubtitles);
+      } catch (error) {
+        console.error('Error fetching subtitles:', error);
+      }
+    };
+
     try {
       // Fetch user details by videoId
       const response = await axios.get(
@@ -572,6 +633,7 @@ const Filtered = ({route, navigation}) => {
       // Set selected video URI and show the modal
       setSelectedVideoUri(uri);
       fetchPhoneNumber(videoId);
+      fetchSubtitles(videoId);
       setIsModalVisible(true);
     }
   };
@@ -610,7 +672,7 @@ const Filtered = ({route, navigation}) => {
     const share = {
       title: 'Share User Video',
       message: `Check out this video shared by ${firstName}`,
-      url: selectedVideoUri, // Must be a valid URI
+      url:`${env.baseURL}/users/share?target=app://api/videos/user/${selectedUserId}`, // Must be a valid URI
     };
     try {
       const shareResponse = await Share.open(share);
@@ -629,7 +691,7 @@ const Filtered = ({route, navigation}) => {
             data={videourl}
             renderItem={({item}) => (
               <TouchableOpacity
-                onPress={() => openModal(item.uri, item.id)} // Pass video URI and ID
+                onPress={() => openModal(item.uri, item.id,item.userId)} // Pass video URI and ID
                 style={styles.videoItem}>
                 <Video
                   source={{uri: item.uri}}
@@ -679,6 +741,19 @@ const Filtered = ({route, navigation}) => {
                     onError={error =>
                       console.error('Video playback error:', error)
                     }
+                    onProgress={({currentTime}) => {
+                      setCurrentTime(currentTime); // Update the current playback time
+                      const activeSubtitle = subtitles.find(
+                        subtitle =>
+                          currentTime >= subtitle.startTime &&
+                          currentTime <= subtitle.endTime,
+                      );
+                      console.log('Current Time:', currentTime);
+                      console.log('Active Subtitle:', activeSubtitle);
+                      setCurrentSubtitle(
+                        activeSubtitle ? activeSubtitle.text : '',
+                      );
+                    }}
                   />
                   <TouchableOpacity
                     onPress={() => navigation.navigate('Trending')}
@@ -729,6 +804,17 @@ const Filtered = ({route, navigation}) => {
                       </TouchableOpacity>
                     </>
                   )}
+                  <View style={styles.subtitle}>
+                    <Text
+                      style={{
+                        color: '#ffffff',
+                        fontSize: 18,
+                        textAlign: 'center',
+                        fontWeight: 800,
+                      }}>
+                      {currentSubtitle}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -896,6 +982,13 @@ const styles = StyleSheet.create({
     top: 0,
     fontWeight: '900',
     color: '#ffffff',
+  },
+  subtitle: {
+    position: 'absolute',
+    right: 100,
+    width: 200,
+    padding: 10,
+    bottom: 155,
   },
 });
 

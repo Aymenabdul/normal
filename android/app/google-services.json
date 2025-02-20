@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "192459313357",
+    "project_id": "wezume-a1db2",
+    "storage_bucket": "wezume-a1db2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:192459313357:android:fe00987693ccc434eed984",
+        "android_client_info": {
+          "package_name": "com.vprofile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAX4ADcIVkO5pDZkdtBvPXQyvlJd2TVYX0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

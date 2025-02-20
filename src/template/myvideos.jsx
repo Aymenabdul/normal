@@ -54,6 +54,8 @@ const Myvideos = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [subtitles, setSubtitles] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [useId, setUseId] = useState(null);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
 
   const handleGesture = event => {
@@ -458,12 +460,12 @@ const Myvideos = () => {
         const videoURIs = videoData.reduce((acc, video) => {
           acc.push({
             id: video.id,
+            useId: video.userId,
             title: video.title || 'Untitled Video',
             uri: `${env.baseURL}/api/videos/user/${video.userId}`,
           });
           return acc;
         }, []);
-
         setVideoUrl(videoURIs);
         setHasVideo(true);
 
@@ -477,7 +479,7 @@ const Myvideos = () => {
     };
     fetchVideos();
     fetchProfilePic(userId); // Fetch all videos if no filteredVideos are provided
-  }, [userId, videoId]);
+  }, [userId, videoId, useId]); // Dependency array
 
   const fetchLikeCount = () => {
     console.log('Fetching like count for videoId:', videoId); // Check if the videoId is correct
@@ -572,9 +574,10 @@ const Myvideos = () => {
     }
   };
 
-  const openModal = async (uri, videoId, index) => {
+  const openModal = async (uri, videoId, index,useId) => {
     console.log('Video ID:', videoId); // Debugging: Check if videoId is passed correctly
     setVideoId(videoId);
+    setSelectedUserId(useId);
     setCurrentIndex(index);
     // Directly use videoId in the function
 
@@ -707,7 +710,7 @@ const Myvideos = () => {
     const share = {
       title: 'Share User Video',
       message: `Check out this video shared by ${firstName}`,
-      url: selectedVideoUri, // Must be a valid URI
+      url: `${env.baseURL}/users/share?target=app://api/videos/user/${selectedUserId}`, // Must be a valid URI
     };
 
     try {
@@ -727,7 +730,7 @@ const Myvideos = () => {
           data={videourl}
           renderItem={({item, index}) => (
             <TouchableOpacity
-              onPress={() => openModal(item.uri, item.id, index)} // Pass video URI and ID
+              onPress={() => openModal(item.uri, item.id, index, item.useId)} // Pass video URI and ID
               style={[
                 styles.videoItem,
                 // index >= 4 && index < 8 ? styles.secondRow : null, // Apply styles to the second row

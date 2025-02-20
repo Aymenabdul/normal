@@ -55,6 +55,7 @@ const HomeScreen = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [jobOption, setJobOption] = useState('');
   const [email, setEmail] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [subtitles, setSubtitles] = useState([]);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
@@ -483,6 +484,7 @@ const HomeScreen = () => {
         const videoURIs = videoData.reduce((acc, video) => {
           acc.push({
             id: video.videoId,
+            useId: video.userId,
             title: video.title || 'Untitled Video',
             uri: `${env.baseURL}/api/videos/user/${video.userId}`,
           });
@@ -597,9 +599,10 @@ const HomeScreen = () => {
     }
   };
 
-  const openModal = async (uri, videoId, index) => {
+  const openModal = async (uri, videoId, index,useId) => {
     console.log('Video ID:', videoId); // Debugging: Check if videoId is passed correctly
     setVideoId(videoId);
+    setSelectedUserId(useId);
     setCurrentIndex(index);
     // Directly use videoId in the function
 
@@ -730,7 +733,7 @@ const HomeScreen = () => {
     const share = {
       title: 'Share User Video',
       message: `Check out this video shared by ${firstName}`,
-      url: selectedVideoUri, // Must be a valid URI
+      url: `${env.baseURL}/users/share?target=app://api/videos/user/${selectedUserId}`, // Must be a valid URI
     };
 
     try {
@@ -750,7 +753,7 @@ const HomeScreen = () => {
           data={videourl}
           renderItem={({item, index}) => (
             <TouchableOpacity
-              onPress={() => openModal(item.uri, item.id, index)} // Pass video URI and ID
+              onPress={() => openModal(item.uri, item.id, index,item.useId)} // Pass video URI and ID
               style={styles.videoItem}>
               <Video
                 source={{uri: item.uri}}

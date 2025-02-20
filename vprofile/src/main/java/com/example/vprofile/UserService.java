@@ -81,5 +81,18 @@ public class UserService {
         // Send email
         emailService.sendVerificationEmail(user.getEmail(), token);
     }
-    
+
+    public boolean updatePasswordByEmail(String email, String newPassword) {
+        // Find the user by email
+        Optional<User> userOptional = userRepository.findByEmail(email);
+        
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            user.setPassword(newPassword); // Update the password
+            userRepository.save(user); // Save the updated user
+            return true;
+        } else {
+            return false; // If user not found
+        }
+    }
 }

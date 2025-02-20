@@ -57,23 +57,56 @@ const HomeScreen = () => {
   const [email, setEmail] = useState('');
   const [currentTime, setCurrentTime] = useState(0);
   const [subtitles, setSubtitles] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
   const defaultProfileImageUrl = require('./assets/defaultpropic.png');
   const DefaultName = 'User';
 
+  let swipeInProgress = false; // Variable to track if a swipe is already in progress
+  let swipeDirection = null; // To track the current swipe direction
+
   const handleGesture = event => {
     const {translationY} = event.nativeEvent;
 
-    // Swipe up to go to the next video
-    if (translationY < -100) {
-      // Swiped up (threshold can be adjusted)
-      moveToNextVideo();
+    // Log translationY for debugging
+    console.log('Translation Y:', translationY);
+
+    // Ignore further gestures if a swipe is already in progress
+    if (swipeInProgress) {
+      console.log('Swipe already in progress. Ignoring this gesture.');
+      return;
     }
 
-    // Swipe down to go to the previous video
-    if (translationY > 100) {
-      // Swiped down (threshold can be adjusted)
-      moveToPreviousVideo();
+    // Swipe detection threshold
+    const swipeThreshold = 0; // Minimum translationY to trigger the action
+
+    // Check if swipe direction is already detected
+    if (swipeDirection) {
+      return; // If direction is already detected, ignore other gestures
+    }
+
+    // Swipe up action (move to the next video)
+    if (translationY < -swipeThreshold) {
+      console.log('Swipe up detected. Moving to next video.');
+      swipeInProgress = true; // Block further gestures
+      swipeDirection = 'up'; // Set direction
+
+      moveToNextVideo().finally(() => {
+        swipeInProgress = false; // Allow new gestures after action completes
+        swipeDirection = null; // Reset direction
+      });
+    }
+
+    // Swipe down action (move to the previous video)
+    if (translationY > swipeThreshold) {
+      console.log('Swipe down detected. Moving to previous video.');
+      swipeInProgress = true; // Block further gestures
+      swipeDirection = 'down'; // Set direction
+
+      moveToPreviousVideo().finally(() => {
+        swipeInProgress = false; // Allow new gestures after action completes
+        swipeDirection = null; // Reset direction
+      });
     }
   };
 
@@ -426,7 +459,7 @@ const HomeScreen = () => {
         const videoURIs = videoData.reduce((acc, video) => {
           acc.push({
             id: video.id,
-            userId: video.userId,
+            useId: video.userId,
             title: video.title || 'Untitled Video',
             uri: `${env.baseURL}/api/videos/user/${video.userId}`,
           });
@@ -562,8 +595,9 @@ const HomeScreen = () => {
     }
   };
 
-  const openModal = async (uri, videoId, index) => {
+  const openModal = async (uri, videoId, index,useId) => {
     setVideoId(videoId);
+    setSelectedUserId(useId);
     setCurrentIndex(index);
 
     const activeSubtitle = subtitles.find(
@@ -681,7 +715,7 @@ const HomeScreen = () => {
     const share = {
       title: 'Share User Video',
       message: `Check out this video shared by ${firstName}`,
-      url: selectedVideoUri, // Must be a valid URI
+      url: `${env.baseURL}/users/share?target=app://api/videos/user/${selectedUserId}`, // Must be a valid URI
     };
 
     try {
@@ -701,7 +735,7 @@ const HomeScreen = () => {
           data={videourl}
           renderItem={({item, index}) => (
             <TouchableOpacity
-              onPress={() => openModal(item.uri, item.id, index)} // Pass video URI and ID
+              onPress={() => openModal(item.uri, item.id, index,item.useId)} // Pass video URI and ID
               style={[
                 styles.videoItem,
                 index >= 4 && index < 8 ? styles.secondRow : null, // Apply styles to the second row

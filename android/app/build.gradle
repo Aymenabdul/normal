@@ -82,8 +82,8 @@ android {
         applicationId "com.vprofile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 7
-        versionName "1.6"
+        versionCode 9
+        versionName "1.9"
     }
     signingConfigs {
         debug {
@@ -107,7 +107,6 @@ dependencies {
 //    implementation project(':react-native-video-filters')
     implementation("com.facebook.react:react-android")
     implementation project(':react-native-vector-icons')
-implementation 'com.google.firebase:firebase-analytics:17.3.0'
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

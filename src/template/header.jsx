@@ -132,6 +132,16 @@ const Header = ({Value, profile, userName, userId}) => {
     Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
   };
 
+  const openTutorial = () => {
+    const url = 'https://wezume.com/wezume-demo-video.mp4';
+    Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
+  };
+
+  const openFaq = () => {
+    const url = 'https://wezume.com/faq/';
+    Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
+  };
+
   // Clear all notifications
   const clearNotifications = async () => {
     try {
@@ -234,14 +244,14 @@ const Header = ({Value, profile, userName, userId}) => {
               </>
             )}
             <View style={styles.line}></View>
-            <TouchableOpacity onPress={''}>
+            <TouchableOpacity onPress={openTutorial}>
               <Text style={styles.options}>
-                <Video name={'comment-video'} size={22} color={'grey'} />{' '}
+                <Video name={'comment-video'} size={22} color={'grey'} />
                 Tutorial Video
               </Text>
             </TouchableOpacity>
             <View style={styles.line}></View>
-            <TouchableOpacity onPress={''}>
+            <TouchableOpacity onPress={openFaq}>
               <Text style={styles.options}>
                 <Faq name={'questioncircle'} size={20} color={'grey'} /> FAQ
               </Text>

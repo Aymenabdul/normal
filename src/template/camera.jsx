@@ -8,7 +8,7 @@ import {
   StyleSheet,
   Platform,
   Alert,
-  Button,
+  Linking,
 } from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {
@@ -233,6 +233,11 @@ const CameraPage = () => {
     }
   };
 
+   const openTutorial = () => {
+      const url = 'https://wezume.com/wezume-demo-video.mp4';
+      Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
+    };
+
   return (
     <View
       style={{
@@ -283,7 +288,7 @@ const CameraPage = () => {
         />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.infoButton}>
+      <TouchableOpacity style={styles.infoButton} onPress={openTutorial}>
         <AntDesign name={'infocirlce'} size={30} style={styles.infoicon} />
       </TouchableOpacity>
 

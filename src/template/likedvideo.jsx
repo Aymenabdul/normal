@@ -56,6 +56,7 @@ const HomeScreen = () => {
   const [email, setEmail] = useState('');
   const [currentTime, setCurrentTime] = useState(0);
   const [subtitles, setSubtitles] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
 
   const handleGesture = event => {
@@ -429,6 +430,7 @@ const HomeScreen = () => {
         if (Array.isArray(videoData) && videoData.length > 0) {
           const videoURIs = videoData.map(video => ({
             id: video.id,
+            useId: video.userId,
             title: video.title || 'Untitled Video',
             uri: `${env.baseURL}/api/videos/user/${video.userId}`,
           }));
@@ -526,7 +528,7 @@ const HomeScreen = () => {
   };
 
   // Handle dislike action
-  const handleDislike = async videoId => {
+  const handleDislike = async () => {
     const newLikedState = !isLiked[videoId]; // Toggle the dislike status (opposite of like)
     setIsLiked(prevState => ({
       ...prevState,
@@ -571,9 +573,10 @@ const HomeScreen = () => {
     }
   };
 
-  const openModal = async (uri, videoId) => {
+  const openModal = async (uri, videoId,useId) => {
     console.log('Video ID:', videoId); // Debugging: Check if videoId is passed correctly
     setVideoId(videoId);
+    setSelectedUserId(useId);
     // Directly use videoId in the function
 
     const activeSubtitle = subtitles.find(
@@ -703,7 +706,7 @@ const HomeScreen = () => {
     const share = {
       title: 'Share User Video',
       message: `Check out this video shared by ${firstName}`,
-      url: selectedVideoUri, // Must be a valid URI
+      url:`${env.baseURL}/users/share?target=app://api/videos/user/${selectedUserId}`, // Must be a valid URI
     };
 
     try {
@@ -723,7 +726,7 @@ const HomeScreen = () => {
           data={videourl}
           renderItem={({item}) => (
             <TouchableOpacity
-              onPress={() => openModal(item.uri, item.id)} // Pass video URI and ID
+              onPress={() => openModal(item.uri, item.id,item.useId)} // Pass video URI and ID
               style={styles.videoItem}>
               <Video
                 source={{uri: item.uri}}

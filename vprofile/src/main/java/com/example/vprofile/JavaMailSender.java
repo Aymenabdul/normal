@@ -10,6 +10,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -24,23 +26,19 @@ public class JavaMailSender {
     private UserService userService;
 
     @GetMapping("/verify-email")
-public ResponseEntity<?> verifyEmail(@RequestParam("token") String token) {
-    // Attempt to verify the token and retrieve the associated user
-    User user = verificationTokenService.verifyTemporaryToken(token); // Directly assign the returned User
-
-    if (user != null) {
-        // Enable the user and save to the database
-        user.setEnabled(true);
-        userService.saveUser(user);
-
-        // Prepare response
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Your account has been verified and activated.");
-        return ResponseEntity.ok(response);
+    public RedirectView verifyEmail(@RequestParam("token") String token) {
+        User user = verificationTokenService.verifyTemporaryToken(token);
+    
+        if (user != null) {
+            user.setEnabled(true);
+            userService.saveUser(user);
+    
+            // Redirect to wezume.com after successful verification
+            return new RedirectView("https://wezume.com/success");
+        }
+    
+        // Redirect to an error page if the token is invalid/expired
+        return new RedirectView("https://wezume.com/error"); 
     }
-
-    // Return bad request if token verification fails
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or expired token.");
-}
 
 }

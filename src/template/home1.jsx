@@ -38,9 +38,34 @@ const Home1 = () => {
   const [currentSubtitle, setCurrentSubtitle] = useState('');
   const [videoId, setVideoId] = useState();
   const [isVideoVisible, setIsVideoVisible] = useState(true);
+  const [isDisabled, setIsDisabled] = useState(false);
 
   const subtitlesUrl = `${env.baseURL}/api/videos/${userId}/subtitles.srt`;
 
+  useEffect(() => {
+    // Get today's date in IST (Indian Standard Time)
+    const todayDate = new Date().setHours(0, 0, 0, 0); // Set time to midnight to focus on the date only
+
+    console.log('Today:', todayDate);
+
+    // Set the target disable date (Feb 23rd, 2025) in IST
+    const disableDate = new Date('2025-02-23T00:00:00+05:30').setHours(
+      0,
+      0,
+      0,
+      0,
+    ); // Set to midnight for comparison
+
+    console.log('Disable Date:', disableDate);
+
+    // Compare the dates and disable the button if today is after the target date
+    if (todayDate > disableDate) {
+      setIsDisabled(true);
+    }
+    if (todayDate < disableDate) {
+      setIsDisabled(false);
+    }
+  }, []);
   // Function to convert time format to seconds
   const parseTimeToSeconds = timeStr => {
     const [hours, minutes, seconds] = timeStr.split(':');
@@ -150,99 +175,20 @@ const Home1 = () => {
       setLoading(false);
     }
   };
-  // Fetch user's video
-  const fetchVideo = async userId => {
-    setLoading(true);
-    try {
-      const rangeHeader = 'bytes=0-999999';
-      const response = await fetch(`${env.baseURL}/api/videos/user/${userId}`, {
-        headers: {
-          Range: rangeHeader,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch video');
-      }
-
-      // Get the video URL if available
-      const videoUri = `${env.baseURL}/api/videos/user/${userId}`;
-
-      // Now check for profanity
-      const videoResponse = await fetch(
-        `${env.baseURL}/api/videos/check-profane`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            file: videoUri, // Send the video URI in the body
-          }),
-        },
-      );
-
-      // Log the response status
-      console.log('Profanity check response status:', videoResponse.status);
-
-      if (videoResponse.status === 403) {
-        // Profanity detected, log it and show an alert or message
-        console.log('Profanity detected in the video');
-
-        Alert.alert(
-          'Video unavailable',
-          'This video contains inappropriate content and cannot be viewed.',
-          [
-            {
-              text: 'Delete',
-              onPress: () => {
-                deleVideo(userId);
-                console.log('Video deleted');
-                // Set the necessary states after deletion
-                setHasVideo(false); // Hide the video
-                setIsVideoVisible(false); // Set the video visibility to false
-              },
-              style: 'destructive', // This makes the button red
-            },
-          ],
-          {cancelable: false}, // Prevents dismissing the alert by tapping outside
-        );
-      } else {
-        // Log that no profanity was found
-        console.log('No profanity detected in the video');
-
-        // Set video URL and make it visible if no profanity is detected
-        setVideoUri(videoUri);
-        setHasVideo(true);
-        setIsVideoVisible(true);
-      }
-    } catch (error) {
-      // Log the error message
-      console.log('Error occurred:', error);
-      Alert.alert('Error', 'An error occurred while fetching the video.');
-      setHasVideo(false);
-      setIsVideoVisible(false);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const deleVideo = async userId => {
-              const response = await fetch(
-                `${env.baseURL}/api/videos/delete/${userId}`,
-                {
-                  method: 'DELETE',
-                },
-              );
+    const response = await fetch(`${env.baseURL}/api/videos/delete/${userId}`, {
+      method: 'DELETE',
+    });
 
-              if (!response.ok) {
-                throw new Error('Failed to delete video');
-              }
+    if (!response.ok) {
+      throw new Error('Failed to delete video');
+    }
 
-              const message = await response.text();
-              console.log(message); // "Video deleted successfully for userId: <userId>"
-              setHasVideo(false); // Hide the + icon when video is deleted
-              setVideoUri(null); // Clear the video URI
+    const message = await response.text();
+    console.log(message); // "Video deleted successfully for userId: <userId>"
+    setHasVideo(false); // Hide the + icon when video is deleted
+    setVideoUri(null); // Clear the video URI
   };
 
   // Delete video
@@ -291,15 +237,13 @@ const Home1 = () => {
     const share = {
       title: 'Share User Video',
       message: `Check out this video shared by ${firstName}`,
-      url: videoUri, // Must be a valid URI
+      url: `${env.baseURL}/users/share?target=app://api/videos/user/${userId}`, // Must be a valid URI
     };
 
     try {
       const shareResponse = await Share.open(share);
       console.log('Share successful:', shareResponse);
-    } catch (error) {
-      console.error('Error sharing video:', error);
-    }
+    } catch (error) {}
   };
 
   //Reactions full code................................................................................................................
@@ -369,6 +313,85 @@ const Home1 = () => {
   }, [userId, hasVideo]); // Dependency on userId and hasVideo
 
   useEffect(() => {
+    const fetchVideo = async userId => {
+      setLoading(true);
+      try {
+        const rangeHeader = 'bytes=0-999999';
+        const response = await fetch(
+          `${env.baseURL}/api/videos/user/${userId}`,
+          {
+            headers: {
+              Range: rangeHeader,
+            },
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch video');
+        }
+
+        // Get the video URL if available
+        const videoUri = `${env.baseURL}/api/videos/user/${userId}`;
+
+        // Now check for profanity
+        const videoResponse = await fetch(
+          `${env.baseURL}/api/videos/check-profane`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              file: videoUri, // Send the video URI in the body
+            }),
+          },
+        );
+
+        // Log the response status
+        console.log('Profanity check response status:', videoResponse.status);
+
+        if (videoResponse.status === 403) {
+          // Profanity detected, log it and show an alert or message
+          console.log('Profanity detected in the video');
+
+          Alert.alert(
+            'Video unavailable',
+            'This video contains inappropriate content and cannot be viewed.',
+            [
+              {
+                text: 'Delete',
+                onPress: () => {
+                  deleVideo(userId);
+                  console.log('Video deleted');
+                  // Set the necessary states after deletion
+                  setHasVideo(false); // Hide the video
+                  setIsVideoVisible(false); // Set the video visibility to false
+                },
+                style: 'destructive', // This makes the button red
+              },
+            ],
+            {cancelable: false}, // Prevents dismissing the alert by tapping outside
+          );
+        } else {
+          // Log that no profanity was found
+          console.log('No profanity detected in the video');
+
+          // Set video URL and make it visible if no profanity is detected
+          setVideoUri(videoUri);
+          setHasVideo(true);
+          setIsVideoVisible(true);
+        }
+      } catch (error) {
+        // Log the error message
+        console.log('Error occurred:', error);
+        Alert.alert('wezume', "welcome you can now record you'r video.");
+        setHasVideo(false);
+        setIsVideoVisible(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const loadDataFromStorage = async () => {
       try {
         // Retrieve values from AsyncStorage
@@ -480,7 +503,8 @@ const Home1 = () => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.deleteButton}
-                onPress={() => deleteVideo(userId)}>
+                onPress={() => !isDisabled && deleteVideo(userId)}
+                disabled={isDisabled}>
                 <Delete
                   name={'delete-empty-outline'}
                   size={28}
