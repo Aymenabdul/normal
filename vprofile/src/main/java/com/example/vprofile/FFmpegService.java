@@ -39,7 +39,7 @@ public class FFmpegService {
             "[bg]boxblur=30:20[blurred];" +            // Apply blur to the background
             "[blurred][fg]overlay=format=auto[blur_fg];" + // Combine blurred background with the foreground
             "[1:v]scale=300:150[wm];" +               // Scale the watermark
-            "[blur_fg][wm]overlay=x=W-w-80:y=20",     // Overlay the watermark on top
+            "[blur_fg][wm]overlay=x=W-w-80:y=100",     // Overlay the watermark on top
             "-vcodec", "libx264",
             "-preset", "ultrafast",
             "-crf", "30",

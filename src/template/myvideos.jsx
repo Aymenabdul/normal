@@ -1,18 +1,16 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   StyleSheet,
   Text,
-  ActivityIndicator,
   ImageBackground,
   FlatList,
   TouchableOpacity,
   Modal,
   Alert,
   Image,
-  Linking,
   BackHandler,
-  Animated,
+  Dimensions,
 } from 'react-native';
 import axios from 'axios';
 import {Buffer} from 'buffer';
@@ -22,18 +20,11 @@ import {useNavigation} from '@react-navigation/native';
 import Ant from 'react-native-vector-icons/AntDesign';
 import Shares from 'react-native-vector-icons/Entypo';
 import Like from 'react-native-vector-icons/Foundation';
-import Phone from 'react-native-vector-icons/FontAwesome6';
-import Whatsapp from 'react-native-vector-icons/FontAwesome';
 import Share from 'react-native-share'; // Import the share module
-import {PermissionsAndroid, Platform} from 'react-native';
 import notifee from '@notifee/react-native';
 import env from './env';
-import {
-  PanGestureHandler,
-  GestureHandlerRootView,
-} from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+const windowHeight = Dimensions.get('screen').height;
 const Myvideos = () => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
@@ -44,7 +35,6 @@ const Myvideos = () => {
   const [firstName, setFirstName] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedVideoUri, setSelectedVideoUri] = useState(null);
-  // Add separate states for Modal
   const [modalProfileImage, setModalProfileImage] = useState(null);
   const [modalFirstName, setModalFirstName] = useState('');
   const [likeCount, setLikeCount] = useState(0);
@@ -56,211 +46,8 @@ const Myvideos = () => {
   const [subtitles, setSubtitles] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [useId, setUseId] = useState(null);
+  const [currentVideo, setCurrentVideo] = useState(null);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
-
-  const handleGesture = event => {
-    const {translationY} = event.nativeEvent;
-
-    // Swipe up to go to the next video
-    if (translationY < -100) {
-      // Swiped up (threshold can be adjusted)
-      moveToNextVideo();
-    }
-
-    // Swipe down to go to the previous video
-    if (translationY > 100) {
-      // Swiped down (threshold can be adjusted)
-      moveToPreviousVideo();
-    }
-  };
-
-  const moveToNextVideo = async () => {
-    if (currentIndex < videourl.length - 1) {
-      const nextIndex = currentIndex + 1;
-      setCurrentIndex(nextIndex); // Move to the next video
-
-      // Fetch video URI and user details
-      const nextVideo = videourl[nextIndex];
-      const videoUri = nextVideo.uri; // Get video URI for the next video
-      const videoId = nextVideo.id; // Get video ID for fetching user details
-
-      try {
-        // Fetch user details based on the videoId
-        const response = await axios.get(
-          `${env.baseURL}/api/videos/user/${videoId}/details`,
-        );
-        const {firstName: fetchedFirstName, profileImage: fetchedProfileImage} =
-          response.data;
-
-        // Convert profile image to Base64 if necessary
-        const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
-
-        // Set modal-specific states for the next video
-        setModalFirstName(fetchedFirstName); // Set the first name for the modal
-        setModalProfileImage(base64Image); // Set the profile image for the modal
-
-        // Update the selected video URI
-        setSelectedVideoUri(videoUri);
-      } catch (error) {
-        console.error('Error fetching user details:', error);
-        setModalFirstName(''); // Reset to prevent stale data
-        setModalProfileImage(null); // Reset profile image
-      }
-
-      // Show the modal with updated video details
-      setIsModalVisible(true); // Open the modal
-    }
-  };
-
-  const moveToPreviousVideo = async () => {
-    if (currentIndex > 0) {
-      const prevIndex = currentIndex - 1;
-      setCurrentIndex(prevIndex); // Move to the previous video
-
-      // Fetch video URI and user details for the previous video
-      const prevVideo = videourl[prevIndex];
-      const videoUri = prevVideo.uri; // Get video URI for the previous video
-      const videoId = prevVideo.id; // Get video ID for fetching user details
-
-      try {
-        // Fetch user details based on the videoId
-        const response = await axios.get(
-          `${env.baseURL}/api/videos/user/${videoId}/details`,
-        );
-        const {firstName: fetchedFirstName, profileImage: fetchedProfileImage} =
-          response.data;
-
-        // Convert profile image to Base64 if necessary
-        const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
-
-        // Set modal-specific states for the previous video
-        setModalFirstName(fetchedFirstName); // Set the first name for the modal
-        setModalProfileImage(base64Image); // Set the profile image for the modal
-
-        // Update the selected video URI
-        setSelectedVideoUri(videoUri);
-      } catch (error) {
-        console.error('Error fetching user details:', error);
-        setModalFirstName(''); // Reset to prevent stale data
-        setModalProfileImage(null); // Reset profile image
-      }
-
-      // Show the modal with updated video details
-      setIsModalVisible(true); // Open the modal
-    }
-  };
-
-  useEffect(() => {
-    console.log('selectedVideoUri:', selectedVideoUri);
-    console.log('currentIndex:', currentIndex);
-    console.log('videosToDisplay:', videourl);
-
-    if (
-      selectedVideoUri &&
-      currentIndex >= 0 &&
-      currentIndex < videourl.length
-    ) {
-      const currentVideo = videourl[currentIndex];
-      const videoId = currentVideo.id; // Get the video ID
-      console.log('videoId:', videoId); // Ensure this is changing
-
-      const fetchLikeStatus = async () => {
-        try {
-          const response = await axios.get(
-            `${env.baseURL}/api/videos/likes/status`,
-            {
-              params: {userId, videoId},
-            },
-          );
-          console.log('Like status response:', response.data); // Log the response to ensure it’s correct
-
-          // Extract the like status for the current videoId
-          const likeStatus = response.data[videoId]; // Use videoId to extract like status
-          console.log('Like status for current videoId:', likeStatus); // Check if likeStatus is correct
-
-          // setIsLiked(likeStatus); // Set the like status
-        } catch (error) {
-          console.error('Error fetching like status:', error);
-        }
-      };
-
-      const fetchLikeCount = async () => {
-        console.log('Fetching like count for videoId:', videoId);
-        try {
-          const response = await axios.get(
-            `${env.baseURL}/api/videos/${videoId}/like-count`,
-          );
-          console.log('Like count response:', response.data); // Log the response to verify it’s correct
-          setLikeCount(response.data); // Assuming the response contains like count
-        } catch (error) {
-          console.error('Error fetching like count:', error);
-        }
-      };
-
-      const fetchUserDetails = async () => {
-        try {
-          const response = await axios.get(
-            `${env.baseURL}/api/videos/user/${videoId}/details`,
-          );
-          // console.log('User details response:', response.data); // Log the user details
-          const {
-            firstName: fetchedFirstName,
-            profileImage: fetchedProfileImage,
-          } = response.data;
-
-          // Convert profile image to Base64 if necessary
-          const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
-
-          // Update the modal with the fetched data
-          setModalFirstName(fetchedFirstName || 'Default Name');
-          setModalProfileImage(base64Image || 'defaultProfileImageUrl');
-        } catch (error) {
-          console.error('Error fetching user details:', error);
-
-          // Reset to default values if fetching fails
-          setModalFirstName('Default Name');
-          setModalProfileImage('defaultProfileImageUrl');
-          setLikeCount(0); // Reset like count
-        }
-      };
-
-      // Fetch phone number for the current video
-      const fetchPhoneNumber = async () => {
-        console.log('Fetching phone number for videoId:', videoId);
-        try {
-          const response = await axios.get(
-            `${env.baseURL}/api/videos/getOwnerByVideoId/${videoId}`,
-          );
-          if (response.data && response.data.phoneNumber) {
-            setPhoneNumber(response.data.phoneNumber);
-            console.log('Phone number found:', response.data.phoneNumber);
-          } else {
-            Alert.alert(
-              'Error',
-              'Owner not found or no phone number available.',
-            );
-          }
-        } catch (error) {
-          console.error('Error fetching owner data:', error);
-          Alert.alert('Error', 'Failed to fetch owner details.');
-        }
-      };
-
-      // Call the fetchPhoneNumber function
-      fetchPhoneNumber();
-
-      // Fetch all data for the current video
-      fetchLikeStatus(); // Fetch like status for the current video
-      fetchLikeCount(); // Fetch like count for the current video
-      fetchUserDetails(); // Fetch user details for the current video
-    }
-  }, [
-    selectedVideoUri,
-    currentIndex,
-    videourl,
-    userId,
-  ]); // Dependencies
-
   useEffect(() => {
     const loadDataFromStorage = async () => {
       try {
@@ -270,13 +57,8 @@ const Myvideos = () => {
 
         // Convert userId and videoId from string to integer
         const parsedUserId = apiUserId ? parseInt(apiUserId, 10) : null;
-
-        // Log the retrieved and parsed values
-        console.log('Retrieved userId:', parsedUserId);
-        // Set state with retrieved data
         setFirstName(apiFirstName);
-        setUserId(parsedUserId); // Set parsed userId in state
-        // Call functions to fetch additional data (profile picture, video, etc.)
+        setUserId(parsedUserId);
         fetchProfilePic(parsedUserId);
       } catch (error) {
         console.error('Error loading user data from AsyncStorage', error);
@@ -284,29 +66,7 @@ const Myvideos = () => {
     };
 
     loadDataFromStorage();
-  }, []); // Empty dependency array means this effect runs once when the component mounts
-
-  const requestCallPermission = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.CALL_PHONE,
-          {
-            title: 'Phone Call Permission',
-            message: 'This app needs access to make phone calls.',
-            buttonNeutral: 'Ask Me Later',
-            buttonNegative: 'Cancel',
-            buttonPositive: 'OK',
-          },
-        );
-        return granted === PermissionsAndroid.RESULTS.GRANTED;
-      } catch (err) {
-        console.warn(err);
-        return false;
-      }
-    }
-    return true;
-  };
+  }, []);
 
   const fetchUserDetails = async () => {
     try {
@@ -321,77 +81,11 @@ const Myvideos = () => {
       const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
 
       // Update the modal with the fetched data
-      setModalFirstName(fetchedFirstName || 'Default Name');
-      setModalProfileImage(base64Image || 'defaultProfileImageUrl');
+      setModalFirstName(fetchedFirstName);
+      setModalProfileImage(base64Image);
     } catch (error) {
       console.error('Error fetching user details:', error);
-
-      // Reset to default values if fetching fails
-      setModalFirstName('Default Name');
-      setModalProfileImage('defaultProfileImageUrl');
-      setLikeCount(0); // Reset like count
     }
-  };
-
-  const fetchPhoneNumber = () => {
-    console.log('Fetching phone number for videoId:', videoId); // Log videoId to ensure it's correct
-    axios
-      .get(`${env.baseURL}/api/videos/getOwnerByVideoId/${videoId}`)
-      .then(response => {
-        if (response.data && response.data.phoneNumber) {
-          setPhoneNumber(response.data.phoneNumber);
-          console.log(response.data.phoneNumber);
-          console.log('Phone number found:', response.data.phoneNumber); // Log the phone number
-        } else {
-          Alert.alert('Error', 'Owner not found or no phone number available.');
-        }
-      })
-      .catch(error => {
-        console.error('Error fetching owner data:', error); // Log the error
-      });
-  };
-
-  const makeCall = () => {
-    console.log('videoId in makeCall:', videoId); // Log the videoId being passed
-    if (phoneNumber) {
-      console.log('Making call to:', phoneNumber);
-      Linking.openURL(`tel:${phoneNumber}`).catch(err => {
-        console.error('Error making call:', err);
-        Alert.alert(
-          'Error',
-          'Call failed. Make sure the app has permission to make calls.',
-        );
-      });
-    } else {
-      console.log('No phone number, fetching phone number...'); // Log that we're fetching the phone number
-    }
-  };
-
-  // Function to send a WhatsApp message
-  const sendWhatsappMessage = () => {
-    console.log('sendWhatsappMessage function called'); // Log when the function is called
-
-    if (phoneNumber) {
-      const message = `Hello, ${modalFirstName} it's nice to connect with you.`; // Customize your message
-      const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(
-        message,
-      )}`;
-
-      console.log('Phone number:', phoneNumber); // Log the phone number
-      console.log('Message:', message); // Log the message
-      console.log('Constructed URL:', url); // Log the URL being used for the WhatsApp message
-
-      Linking.openURL(url).catch(err => {
-        console.error('Error sending WhatsApp message:', err);
-        Alert.alert(
-          'Error',
-          'Failed to send message. Make sure WhatsApp is installed and the phone number is correct.',
-        );
-      });
-    } else {
-      console.log('No phone number, fetching phone number...'); // Log that we're fetching the phone number
-    }
-    fetchPhoneNumber(videoId);
   };
 
   useEffect(() => {
@@ -437,9 +131,7 @@ const Myvideos = () => {
   useEffect(() => {
     const fetchVideos = async () => {
       try {
-        setLoading(true); // Start loading state
-
-        // Fetch the video data from the backend
+        setLoading(true);
         const response = await fetch(`${env.baseURL}/api/videos/videos`);
         if (!response.ok) {
           throw new Error(`Failed to fetch videos: ${response.statusText}`);
@@ -450,7 +142,6 @@ const Myvideos = () => {
 
         // Exit early if no data is returned
         if (!Array.isArray(videoData) || videoData.length === 0) {
-          console.warn('No videos available');
           setVideoUrl([]);
           setHasVideo(false);
           return;
@@ -468,8 +159,6 @@ const Myvideos = () => {
         }, []);
         setVideoUrl(videoURIs);
         setHasVideo(true);
-
-        console.log('Video Data Processed:', videoURIs); // Log processed data
       } catch (error) {
         console.error('Error fetching videos:', error);
         setHasVideo(false);
@@ -574,8 +263,7 @@ const Myvideos = () => {
     }
   };
 
-  const openModal = async (uri, videoId, index,useId) => {
-    console.log('Video ID:', videoId); // Debugging: Check if videoId is passed correctly
+  const openModal = async (uri, videoId, index, useId) => {
     setVideoId(videoId);
     setSelectedUserId(useId);
     setCurrentIndex(index);
@@ -585,8 +273,6 @@ const Myvideos = () => {
       subtitle =>
         currentTime >= subtitle.startTime && currentTime <= subtitle.endTime,
     );
-    console.log('Current Time:', currentTime);
-    console.log('Matching Subtitle:', activeSubtitle);
     setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : '');
 
     const parseTimeToSeconds = timeStr => {
@@ -629,9 +315,7 @@ const Myvideos = () => {
         const subtitlesUrl = `${env.baseURL}/api/videos/user/${videoId}/subtitles.srt`;
         const response = await fetch(subtitlesUrl);
         const text = await response.text();
-        console.log('Fetched Subtitles:', text); // Debug log
         const parsedSubtitles = parseSRT(text);
-        console.log('Parsed Subtitles:', parsedSubtitles); // Debug log
         setSubtitles(parsedSubtitles);
       } catch (error) {
         console.error('Error fetching subtitles:', error);
@@ -666,11 +350,8 @@ const Myvideos = () => {
 
       // Set selected video URI and show the modal
       setSelectedVideoUri(uri);
-      fetchPhoneNumber(videoId);
       fetchUserDetails(videoId);
-      sendWhatsappMessage();
       fetchSubtitles(videoId);
-      makeCall();
       setIsModalVisible(true);
       console.log('Modal should now be visible');
     }
@@ -719,6 +400,71 @@ const Myvideos = () => {
     } catch (error) {}
   };
 
+  const onViewableItemsChanged = useRef(({viewableItems}) => {
+    if (viewableItems.length > 0) {
+      const video = viewableItems[0].item; // Get the first visible video
+      const videoId = video?.id; // Ensure videoId is valid
+      if (!videoId) {
+        console.error('❌ Error: videoId is null or undefined');
+        return; // Stop execution if videoId is not valid
+      }
+
+      setCurrentVideo(video); // Update current video
+      setSelectedVideoUri(video.uri); // Set selected video URI
+      const fetchLikeStatus = async () => {
+        try {
+          const response = await axios.get(
+            `${env.baseURL}/api/videos/likes/status`,
+            {
+              params: {userId},
+            },
+          );
+          const likeStatus = response.data;
+          setIsLiked(likeStatus);
+        } catch (error) {
+          console.error('Error fetching like status:', error);
+        }
+      };
+      const fetchLikeCount = () => {
+        console.log('Fetching like count for videoId:', videoId);
+        axios
+          .get(`${env.baseURL}/api/videos/${videoId}/like-count`)
+          .then(response => {
+            console.log('API response:', response.data);
+            setLikeCount(response.data); // Update state with the correct count
+          })
+          .catch(error => {
+            console.error('Error fetching like count:', error);
+          });
+      };
+      const fetchUserDetails = async () => {
+        try {
+          const response = await axios.get(
+            `${env.baseURL}/api/videos/user/${videoId}/details`,
+          );
+          // console.log('User details response:', response.data); // Log the user details
+          const {
+            firstName: fetchedFirstName,
+            profileImage: fetchedProfileImage,
+          } = response.data;
+
+          // Convert profile image to Base64 if necessary
+          const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
+
+          // Update the modal with the fetched data
+          setModalFirstName(fetchedFirstName);
+          setModalProfileImage(base64Image);
+        } catch (error) {
+          console.error('Error fetching user details:', error);
+        }
+      };
+      // Fetch user details, like count, and like status
+      fetchUserDetails(videoId);
+      fetchLikeCount(videoId);
+      fetchLikeStatus(videoId);
+    }
+  }).current;
+
   return (
     <View style={styles.container}>
       <Header profile={profileImage} userName={firstName} />
@@ -731,10 +477,7 @@ const Myvideos = () => {
           renderItem={({item, index}) => (
             <TouchableOpacity
               onPress={() => openModal(item.uri, item.id, index, item.useId)} // Pass video URI and ID
-              style={[
-                styles.videoItem,
-                // index >= 4 && index < 8 ? styles.secondRow : null, // Apply styles to the second row
-              ]}>
+              style={[styles.videoItem]}>
               <Video
                 source={{uri: item.uri}}
                 style={styles.videoPlayer}
@@ -757,22 +500,39 @@ const Myvideos = () => {
         animationType="fade"
         transparent={true}
         onRequestClose={closeModal}>
-        <GestureHandlerRootView>
-          <PanGestureHandler onGestureEvent={handleGesture}>
-            <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
+        <View style={styles.modalContainer}>
+          <FlatList
+            data={videourl}
+            keyExtractor={item => item.id.toString()}
+            pagingEnabled
+            showsVerticalScrollIndicator={false}
+            snapToAlignment="start"
+            decelerationRate="fast"
+            scrollEnabled
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={{itemVisiblePercentThreshold: 50}} // Trigger when 50% visible
+            getItemLayout={(data, index) => ({
+              length: windowHeight,
+              offset: windowHeight * index,
+              index,
+            })}
+            renderItem={({item}) => (
+              <View style={[styles.modalContent, {height: windowHeight}]}>
+                {/* User Details Section */}
                 <View style={styles.userDetails}>
-                  {modalProfileImage && (
+                  {item.profileImage && (
                     <Image
-                      source={{uri: modalProfileImage}}
+                      source={{uri: item.profileImage}}
                       style={styles.profileImage}
                     />
                   )}
-                  <Text style={styles.userName}>{modalFirstName}</Text>
+                  <Text style={styles.userName}>{item.firstName}</Text>
                 </View>
+
+                {/* Video Player */}
                 <View style={styles.fullScreen}>
                   <Video
-                    source={{uri: selectedVideoUri}}
+                    source={{uri: item.uri}}
                     style={styles.fullScreenVideo}
                     controls={true}
                     resizeMode="cover"
@@ -780,19 +540,26 @@ const Myvideos = () => {
                       console.error('Video playback error:', error)
                     }
                     onProgress={({currentTime}) => {
-                      setCurrentTime(currentTime); // Update the current playback time
+                      setCurrentTime(currentTime);
                       const activeSubtitle = subtitles.find(
                         subtitle =>
                           currentTime >= subtitle.startTime &&
                           currentTime <= subtitle.endTime,
                       );
-                      console.log('Current Time:', currentTime);
-                      console.log('Active Subtitle:', activeSubtitle);
                       setCurrentSubtitle(
                         activeSubtitle ? activeSubtitle.text : '',
                       );
                     }}
                   />
+                  <View style={styles.userDetails}>
+                    {modalProfileImage && (
+                      <Image
+                        source={{uri: modalProfileImage}}
+                        style={styles.profileImage}
+                      />
+                    )}
+                    <Text style={styles.userName}>{modalFirstName}</Text>
+                  </View>
                   <TouchableOpacity
                     onPress={() => navigation.navigate('Trending')}
                     style={styles.trending1}>
@@ -839,18 +606,21 @@ const Myvideos = () => {
                     <Text
                       style={{
                         color: '#ffffff',
-                        fontSize: 18,
+                        fontSize: 12,
                         textAlign: 'center',
                         fontWeight: 800,
+                        bottom: -30,
+                        left: 20,
+                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
                       }}>
                       {currentSubtitle}
                     </Text>
                   </View>
                 </View>
               </View>
-            </View>
-          </PanGestureHandler>
-        </GestureHandlerRootView>
+            )}
+          />
+        </View>
       </Modal>
     </View>
   );
@@ -863,26 +633,18 @@ const styles = StyleSheet.create({
   },
   videoItem: {
     flex: 1,
-    // marginTop: '-16.5%',
-    // marginBottom: '4%',
-    // zIndex: 10,
   },
   columnWrapper: {
     justifyContent: 'flex-start',
-    gap: 1,
-    marginBottom: '-2.7%',
+    aspectRatio: 2.27,
   },
   videoPlayer: {
-    height: 190,
-    width: '100%', // Adjust width for a uniform layout
+    height: '99%',
+    width: '100%',
   },
   imageBackground: {
     flex: 1,
     justifyContent: 'center',
-  },
-  videoList: {
-    marginTop: 1,
-    // paddingHorizontal: 2, // Padding around the list
   },
   emptyListText: {
     textAlign: 'center',
@@ -893,20 +655,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    // backgroundColor: 'rgba(0, 0, 0, 0.8)', // Dark background for the modal
-  },
-  secondRow: {
-    marginTop: '1%',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
   },
   modalContent: {
-    width: '100%',
-    height: '100%',
+    width: 'auto',
+    height: '50%',
     justifyContent: 'center',
     alignItems: 'center',
   },
   fullScreenVideo: {
     width: '100%',
-    height: '100%',
+    height: '94%',
   },
   fullScreen: {
     flex: 1,
@@ -914,7 +673,7 @@ const styles = StyleSheet.create({
   },
   userDetails: {
     position: 'absolute',
-    top: '85%',
+    top: '78%',
     left: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1016,10 +775,10 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     position: 'absolute',
-    right:100,
-    width:200,
-    padding:10,
-    bottom: 155,
+    right: 50,
+    width: 300,
+    padding: 10,
+    bottom: '26%',
   },
 });
 

@@ -182,16 +182,10 @@ const [ userId, setUserId ] = useState();
           }
         );
         if (!response.ok) throw new Error('Failed to fetch video');
-        console.log('====================================');
-        console.log("fwtchVideo", response);
-        console.log('====================================');
         const videoUril = `${env.baseURL}/api/videos/user/${userId}`;
         setVideoUri(videoUril);
         setHasVideo(true); // Set to true if video is available
       } catch (error) {
-        console.log('====================================');
-        console.log("fetchVideo ",error);
-        console.log('====================================');
         alert('Welcome , you can now start recording the video');
         setHasVideo(false); // Set to false if no video is available
       } finally {
@@ -201,9 +195,6 @@ const [ userId, setUserId ] = useState();
 
   // Fetch transcription
   const fetchTranscription = async () => {
-    console.log('====================================');
-    console.log('transcription userId',userId);
-    console.log('====================================');
     try {
       const response = await axios.get(
         `${env.baseURL}/api/videos/${userId}/transcription`,
@@ -511,7 +502,7 @@ const triggerOwnerNotification = async () => {
         transparent>
         <View style={styles.modalBackground}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalHeader}>Transcription</Text>
+            <Text style={{color:'#000',fontWeight:'500'}}>Transcription</Text>
             <TextInput
               value={newTranscription || transcription}
               onChangeText={setNewTranscription}
@@ -562,9 +553,13 @@ const styles = StyleSheet.create({
   videoPlayer: {
     marginLeft: 10,
     marginRight: 10,
-    height: 700,
+    marginTop:23,
+    height:600,
     borderRadius: 10,
-    elevation: 10,
+  },
+  input:{
+    color: '#000',
+    fontWeight:'500',
   },
   transcriptionButton: {
     marginTop: -15,

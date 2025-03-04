@@ -23,6 +23,10 @@ import Media from 'react-native-vector-icons/Entypo';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import {request, PERMISSIONS, RESULTS} from 'react-native-permissions';
+import * as tf from '@tensorflow/tfjs';
+import * as bodySegmentation from '@tensorflow-models/body-segmentation';
+import {SelfieSegmentation} from '@mediapipe/selfie_segmentation';
+import '@tensorflow/tfjs-react-native';
 import axios from 'axios';
 import env from './env';
 
@@ -42,6 +46,7 @@ const CameraPage = () => {
   const [isFrontCamera, setIsFrontCamera] = useState(false);
   const [videoUri, setVideoUri] = useState('');
   const [videos, setVideos] = useState([]);
+  const [segmentationModal, setSegmentationModal] = useState(null);
   const cameraRef = useRef(null);
   const {hasPermission, requestPermission} = useCameraPermission();
   let timerInterval = useRef(null);
@@ -58,6 +63,25 @@ const CameraPage = () => {
       [{text: 'OK', onPress: () => console.log('OK Pressed')}],
       {cancelable: false},
     );
+
+    const loadModel = async () => {
+      try {
+        await tf.ready();
+        await tf.setBackend('cpu');
+        console.log('====================================');
+        console.log(tf.getBackend());
+        console.log('tensorflow ready');
+        console.log('====================================');
+const config =  {modelType:'general',runtime:'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation'};
+        const model = await bodySegmentation.createSegmenter(bodySegmentation.SupportedModels.BodyPix,config
+         );
+        // setSegmentationModal(model);
+        console.log('Model loaded:', model);
+      } catch (error) {
+        console.error('Error loading model:', error);
+      }
+    };
+    loadModel();
   }, []);
 
   useEffect(() => {
@@ -173,13 +197,12 @@ const CameraPage = () => {
           ],
         });
         setCurrentTimer(60); // Reset the timer
+        setUploading(false);
       } else {
         alert('Unexpected response from server. Missing required fields.');
       }
     } catch (error) {
       alert('Error uploading video. Please try again.');
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -238,6 +261,14 @@ const CameraPage = () => {
       Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
     };
 
+  const processFrame = async frame => {
+    if (!segmentationModal) {
+      return;
+    }
+
+    const segmentation = await segmentationModal.segmentPeople(frame);
+  };
+
   return (
     <View
       style={{
@@ -255,6 +286,7 @@ const CameraPage = () => {
         audio={true} // Ensure audio is enabled
         torch={onFlash}
         format={format}
+        onFrameProcessor={processFrame}
         fps={fps}
       />
 

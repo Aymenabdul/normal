@@ -237,7 +237,6 @@ const Edit = () => {
   const getUserDetails = async userId => {
     try {
       const response = await axios.get(`${env.baseURL}/users/get/${userId}`);
-      console.log('User details:', response.data);
       // Set the response data to your state variables
       setFirstName(response.data.firstName);
       setLastName(response.data.lastName);
@@ -259,8 +258,7 @@ const Edit = () => {
     }
   };
   const checkIfEmailExists = async email => {
-    console.log('Checking email:', email); // Log the email you're checking
-    try {
+      try {
       const response = await axios.post(
         `${env.baseURL}/userscheck-email`,
         {email}, // Wrapping email in an object
@@ -275,7 +273,6 @@ const Edit = () => {
   };
 
   const checkIfPhoneExists = async phoneNumber => {
-    console.log('Checking phoneNumber:', phoneNumber);
     try {
       const response = await axios.post(
         `${env.baseURL}/userscheck-phone`,
@@ -284,7 +281,6 @@ const Edit = () => {
           headers: {'Content-Type': 'application/json'},
         },
       );
-      console.log('Response from phonenumber check:', response.data);
       return response.data; // Returns true if phone exists, false otherwise
     } catch (error) {
       console.error('Error checking phone number:', error);
@@ -295,7 +291,6 @@ const Edit = () => {
   const handleProfilePic = async () => {
     launchImageLibrary({mediaType: 'photo'}, async response => {
       if (response.didCancel) {
-        console.log('User canceled image picker');
       } else if (response.errorMessage) {
         console.error('ImagePicker error: ', response.errorMessage);
       } else if (response.assets && response.assets.length > 0) {
@@ -387,13 +382,17 @@ const Edit = () => {
           headers: {'Content-Type': 'application/json'},
         },
       );
-
-      console.log('User updated:', response.data);
       Alert.alert('Success', 'Profile updated successfully!', [
         {
           text: 'OK',
           onPress: () => {
-            navigation.goBack(); // Navigate to the previous screen
+            if (jobOption === 'Employee' || jobOption === 'Entrepreneur' || jobOption === 'Freelancer') { 
+              navigation.navigate('home1'); // Navigate to 'HomeOne' 
+            } else if (jobOption === 'Employer' || jobOption === 'Investor') { 
+              navigation.navigate('HomeScreen'); // Navigate to 'Home' 
+            } else {
+              navigation.goBack(); // Default: go back
+            }
           },
         },
       ]);
@@ -719,7 +718,7 @@ const Edit = () => {
                     <TouchableOpacity
                       onPress={() => removeLanguageField(index)}
                       style={styles.removeButton}>
-                      <Text style={styles.removeButtonText}>X</Text>
+                      <Text style={styles.removeButtonText}>Remove</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -1118,7 +1117,7 @@ const Edit = () => {
         {/* Navigation to Login Screen */}
         <TouchableOpacity onPress={() => navigation.navigate('Account')}>
           <Text style={styles.logAccount}>
-            <Text style={{color: 'blue'}}>Back to Profile</Text>
+            <Text style={{color: '#000'}}>Back to Profile</Text>
           </Text>
         </TouchableOpacity>
       </LinearGradient>
@@ -1173,13 +1172,14 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: '#ffffff',
-    padding: 7,
+    padding:10,
     marginBottom: 10,
     borderRadius: 5,
     paddingLeft: 15,
     color: 'black',
     backgroundColor: '#ffffff',
-    fontSize: 16,
+    fontSize:18,
+    fontWeight:'500',
   },
   label: {
     fontSize: 16,
@@ -1188,12 +1188,17 @@ const styles = StyleSheet.create({
   },
   picker: {
     width: '100%',
+    overflow:'hidden',
     borderWidth: 1,
-    borderColor: '#fffff',
+    borderColor: '#ffffff', // Use a visible border color
     marginBottom: 10,
     color: 'black',
     backgroundColor: '#ffffff',
-    fontSize: 18,
+    fontSize: 16,
+    height: 40, // Reduced height
+    justifyContent: 'center', // Ensures content alignment
+    borderRadius: 5, // Optional for rounded corners
+    paddingHorizontal: 10, // Adjust spacing inside the picker
   },
   loadingIndicator: {
     marginVertical: 20,
@@ -1207,6 +1212,8 @@ const styles = StyleSheet.create({
     marginTop: 15,
     textAlign: 'center',
     color: '#000',
+    fontWeight:'700',
+    fontSize:16,
   },
   signupButton: {
     height: 40,
@@ -1237,8 +1244,9 @@ const styles = StyleSheet.create({
   },
   uploadButtonText: {
     color: '#ffffff',
-    fontWeight: '500',
+    fontWeight: '700',
     marginLeft: '19%',
+    fontSize:18,
   },
   dropdownButton: {
     paddingVertical: 10,
@@ -1252,7 +1260,8 @@ const styles = StyleSheet.create({
   },
   dropdownButtonText: {
     color: '#000',
-    fontSize: 16,
+    fontSize:18,
+    fontWeight:'500',
   },
   dropdownContainer: {
     backgroundColor: '#fff',
@@ -1293,20 +1302,23 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: '#FFF',
-    fontWeight: 'bold',
+    fontWeight: '700',
+    fontSize:16,
   },
   removeButton: {
     backgroundColor: '#007BFF',
     padding: 5,
     borderRadius: 5,
-    width: 20,
+    width:'25%',
     marginTop: -3,
     marginBottom: 5,
     alignSelf: 'flex-end',
   },
   removeButtonText: {
     color: '#FFF',
-    fontWeight: 'bold',
+    fontWeight: '700',
+    textAlign:'center',
+    fontSize:16,
   },
 });
 

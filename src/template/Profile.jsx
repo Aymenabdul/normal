@@ -409,6 +409,7 @@ const styles = StyleSheet.create({
   },
   checkboxText: {
     fontSize: 16,
+    color: '#000',
   },
   signupButton: {
     height: 40,

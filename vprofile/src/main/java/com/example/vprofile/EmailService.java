@@ -12,7 +12,7 @@ private JavaMailSender mailSender;
 
 public void sendVerificationEmail(String to, String token) {
     String subject = "Email Verification";
-    String verificationLink = "http://wezume.in:8081/api/verify-email?token=" + token;
+    String verificationLink = "https://app.wezume.in/api/verify-email?token=" + token;
 
     // HTML content with button styles
     String emailContent = "<html>"

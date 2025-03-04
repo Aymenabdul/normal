@@ -170,27 +170,42 @@ const LoginScreen = () => {
             if (userResponse.data.exists) {
               // User exists, log them in (Skip role selection)
               console.log('User already signed up, logging in...');
-              const {userId, jobOption, firstName} = userResponse.data;
-              await AsyncStorage.setItem('userId', JSON.stringify(userId)); // Assuming userResponse contains userId and jobOption
+              const {userId, jobOption, firstName, phoneNumber} =
+                userResponse.data;
+              await AsyncStorage.setItem('userId', JSON.stringify(userId));
               await AsyncStorage.setItem('firstName', firstName);
 
-              // Navigate based on jobOption
-              if (
-                jobOption === 'Employee' ||
-                jobOption === 'Entrepreneur' ||
-                jobOption === 'Freelancer'
-              ) {
-                console.log('Navigating to HomeScreen...');
-                navigation.navigate('home1', {
-                  firstName,
-                  email,
-                  jobOption,
-                  userId,
-                });
-              } else if (jobOption === 'Employer' || jobOption === 'Investor') {
-                console.log('Navigating to home1...');
-                navigation.navigate('HomeScreen', {
-                  firstName,
+              if (phoneNumber) {
+                // Navigate based on jobOption
+                if (
+                  jobOption === 'Employee' ||
+                  jobOption === 'Entrepreneur' ||
+                  jobOption === 'Freelancer'
+                ) {
+                  console.log('Navigating to home1...');
+                  navigation.navigate('home1', {
+                    firstName,
+                    email,
+                    jobOption,
+                    userId,
+                  });
+                } else if (
+                  jobOption === 'Employer' ||
+                  jobOption === 'Investor'
+                ) {
+                  console.log('Navigating to HomeScreen...');
+                  navigation.navigate('HomeScreen', {
+                    firstName,
+                    email,
+                    jobOption,
+                    userId,
+                  });
+                }
+              } else {
+                // User does not have a phone number, navigate to EditScreen
+                console.log('Navigating to EditScreen...');
+                navigation.navigate('Edit', {
+                  firstName: given_name,
                   email,
                   jobOption,
                   userId,
@@ -220,7 +235,6 @@ const LoginScreen = () => {
         }
       }
     }
-    handleRoleSelect(); // Make sure this is not running prematurely
   };
 
   const handleRoleSelect = async role => {
@@ -331,17 +345,27 @@ const LoginScreen = () => {
 
           setShowRoleSelection(false);
 
-          if (role === 'Employer' || role === 'Investor') {
-            console.log('Navigating to HomeScreen...');
-            navigation.navigate('HomeScreen', {
-              firstName: given_name,
-              email,
-              jobOption: role,
-              userId: saveResponse.data.userId,
-            });
-          } else if (role === 'Employee' || role === 'Entrepreneur') {
-            console.log('Navigating to home1...');
-            navigation.navigate('home1', {
+          if (saveResponse.data.phoneNumber) {
+            if (role === 'Employer' || role === 'Investor') {
+              console.log('Navigating to HomeScreen...');
+              navigation.navigate('HomeScreen', {
+                firstName: given_name,
+                email,
+                jobOption: role,
+                userId: saveResponse.data.userId,
+              });
+            } else if (role === 'Employee' || role === 'Entrepreneur') {
+              console.log('Navigating to home1...');
+              navigation.navigate('home1', {
+                firstName: given_name,
+                email,
+                jobOption: role,
+                userId: saveResponse.data.userId,
+              });
+            }
+          } else {
+            console.log('Navigating to EditScreen...');
+            navigation.navigate('Edit', {
               firstName: given_name,
               email,
               jobOption: role,

@@ -128,6 +128,7 @@ public ResponseEntity<byte[]> getUserProfilePic(@PathVariable Long userId) {
             response.put("email",user.get().getEmail());
             response.put("userId",user.get().getId());
             response.put("firstName",user.get().getFirstName());
+            response.put("phoneNumber",user.get().getPhoneNumber());
             return ResponseEntity.ok(response);
         } else {
             Map<String, Object> response = new HashMap<>();

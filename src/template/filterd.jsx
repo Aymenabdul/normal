@@ -153,10 +153,6 @@ const Filtered = ({route, navigation}) => {
   };
 
   useEffect(() => {
-    console.log('selectedVideoUri:', selectedVideoUri);
-    console.log('currentIndex:', currentIndex);
-    console.log('videosToDisplay:', videourl);
-
     if (
       selectedVideoUri &&
       currentIndex >= 0 &&
@@ -259,11 +255,6 @@ const Filtered = ({route, navigation}) => {
           const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(
             subject,
           )}&body=${encodeURIComponent(body)}`;
-
-          console.log('Email Address:', email); // Log the email address
-          console.log('Email Subject:', subject); // Log the email subject
-          console.log('Email Body:', body); // Log the email body
-          console.log('Constructed Mailto URL:', mailtoUrl); // Log the constructed mailto URL
 
           Linking.openURL(mailtoUrl).catch(err => {
             console.error('Error sending email:', err);
@@ -808,7 +799,7 @@ const Filtered = ({route, navigation}) => {
                     <Text
                       style={{
                         color: '#ffffff',
-                        fontSize: 18,
+                        fontSize: 12,
                         textAlign: 'center',
                         fontWeight: 800,
                       }}>
@@ -838,8 +829,7 @@ const styles = StyleSheet.create({
   },
   columnWrapper: {
     justifyContent: 'flex-start',
-    gap: 1,
-    marginBottom: '-0.5%',
+    aspectRatio:2,
   },
   videoPlayer: {
     height: 190,
@@ -985,9 +975,10 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     position: 'absolute',
-    right: 100,
-    width: 200,
-    padding: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    right:50,
+    width:300,
+    padding:10,
     bottom: 155,
   },
 });

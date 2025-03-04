@@ -1,9 +1,8 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   StyleSheet,
   Text,
-  ActivityIndicator,
   ImageBackground,
   FlatList,
   TouchableOpacity,
@@ -12,7 +11,7 @@ import {
   Image,
   Linking,
   BackHandler,
-  Animated,
+  Dimensions,
 } from 'react-native';
 import axios from 'axios';
 import {Buffer} from 'buffer';
@@ -28,13 +27,8 @@ import Share from 'react-native-share'; // Import the share module
 import {PermissionsAndroid, Platform} from 'react-native';
 import notifee from '@notifee/react-native';
 import env from './env';
-import {
-  PanGestureHandler,
-  GestureHandlerRootView,
-} from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {log} from 'console';
-import {subtle} from 'crypto';
+const windowHeight = Dimensions.get('screen').height;
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -59,238 +53,7 @@ const HomeScreen = () => {
   const [subtitles, setSubtitles] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
-  const defaultProfileImageUrl = require('./assets/defaultpropic.png');
-  const DefaultName = 'User';
-
-  let swipeInProgress = false; // Variable to track if a swipe is already in progress
-  let swipeDirection = null; // To track the current swipe direction
-
-  const handleGesture = event => {
-    const {translationY} = event.nativeEvent;
-
-    // Log translationY for debugging
-    console.log('Translation Y:', translationY);
-
-    // Ignore further gestures if a swipe is already in progress
-    if (swipeInProgress) {
-      console.log('Swipe already in progress. Ignoring this gesture.');
-      return;
-    }
-
-    // Swipe detection threshold
-    const swipeThreshold = 0; // Minimum translationY to trigger the action
-
-    // Check if swipe direction is already detected
-    if (swipeDirection) {
-      return; // If direction is already detected, ignore other gestures
-    }
-
-    // Swipe up action (move to the next video)
-    if (translationY < -swipeThreshold) {
-      console.log('Swipe up detected. Moving to next video.');
-      swipeInProgress = true; // Block further gestures
-      swipeDirection = 'up'; // Set direction
-
-      moveToNextVideo().finally(() => {
-        swipeInProgress = false; // Allow new gestures after action completes
-        swipeDirection = null; // Reset direction
-      });
-    }
-
-    // Swipe down action (move to the previous video)
-    if (translationY > swipeThreshold) {
-      console.log('Swipe down detected. Moving to previous video.');
-      swipeInProgress = true; // Block further gestures
-      swipeDirection = 'down'; // Set direction
-
-      moveToPreviousVideo().finally(() => {
-        swipeInProgress = false; // Allow new gestures after action completes
-        swipeDirection = null; // Reset direction
-      });
-    }
-  };
-
-  const moveToNextVideo = async () => {
-    if (currentIndex < videourl.length - 1) {
-      const nextIndex = currentIndex + 1;
-      setCurrentIndex(nextIndex); // Move to the next video
-
-      // Fetch video URI and user details
-      const nextVideo = videourl[nextIndex];
-      const videoUri = nextVideo.uri; // Get video URI for the next video
-      const videoId = nextVideo.id; // Get video ID for fetching user details
-
-      try {
-        // Fetch user details based on the videoId
-        const response = await axios.get(
-          `${env.baseURL}/api/videos/user/${videoId}/details`,
-        );
-        const {firstName: fetchedFirstName, profileImage: fetchedProfileImage} =
-          response.data;
-
-        // Convert profile image to Base64 if necessary
-        const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
-
-        // Set modal-specific states for the next video
-        setModalFirstName(fetchedFirstName); // Set the first name for the modal
-        setModalProfileImage(base64Image); // Set the profile image for the modal
-
-        // Update the selected video URI
-        setSelectedVideoUri(videoUri);
-      } catch (error) {
-        console.error('Error fetching user details:', error);
-        setModalFirstName(''); // Reset to prevent stale data
-        setModalProfileImage(null); // Reset profile image
-      }
-
-      // Show the modal with updated video details
-      setIsModalVisible(true); // Open the modal
-    }
-  };
-
-  const moveToPreviousVideo = async () => {
-    if (currentIndex > 0) {
-      const prevIndex = currentIndex - 1;
-      setCurrentIndex(prevIndex); // Move to the previous video
-
-      // Fetch video URI and user details for the previous video
-      const prevVideo = videourl[prevIndex];
-      const videoUri = prevVideo.uri; // Get video URI for the previous video
-      const videoId = prevVideo.id; // Get video ID for fetching user details
-
-      try {
-        // Fetch user details based on the videoId
-        const response = await axios.get(
-          `${env.baseURL}/api/videos/user/${videoId}/details`,
-        );
-        const {firstName: fetchedFirstName, profileImage: fetchedProfileImage} =
-          response.data;
-
-        // Convert profile image to Base64 if necessary
-        const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
-
-        // Set modal-specific states for the previous video
-        setModalFirstName(fetchedFirstName); // Set the first name for the modal
-        setModalProfileImage(base64Image); // Set the profile image for the modal
-
-        // Update the selected video URI
-        setSelectedVideoUri(videoUri);
-      } catch (error) {
-        console.error('Error fetching user details:', error);
-        setModalFirstName(''); // Reset to prevent stale data
-        setModalProfileImage(null); // Reset profile image
-      }
-
-      // Show the modal with updated video details
-      setIsModalVisible(true); // Open the modal
-    }
-  };
-
-  useEffect(() => {
-    if (
-      selectedVideoUri &&
-      currentIndex >= 0 &&
-      currentIndex < videourl.length
-    ) {
-      const currentVideo = videourl[currentIndex];
-      const videoId = currentVideo.id; // Get the video ID
-      console.log('videoId:', videoId); // Ensure this is changing
-
-      const fetchLikeStatus = async () => {
-        try {
-          const response = await axios.get(
-            `${env.baseURL}/api/videos/likes/status`,
-            {
-              params: {userId, videoId},
-            },
-          );
-          console.log('Like status response:', response.data); // Log the response to ensure it’s correct
-
-          // Extract the like status for the current videoId
-          const likeStatus = response.data[videoId]; // Use videoId to extract like status
-          console.log('Like status for current videoId:', likeStatus); // Check if likeStatus is correct
-
-          // setIsLiked(likeStatus); // Set the like status
-        } catch (error) {
-          console.error('Error fetching like status:', error);
-        }
-      };
-
-      const fetchLikeCount = async () => {
-        console.log('Fetching like count for videoId:', videoId);
-        try {
-          const response = await axios.get(
-            `${env.baseURL}/api/videos/${videoId}/like-count`,
-          );
-          console.log('Like count response:', response.data); // Log the response to verify it’s correct
-          setLikeCount(response.data); // Assuming the response contains like count
-        } catch (error) {
-          console.error('Error fetching like count:', error);
-        }
-      };
-
-      const fetchUserDetails = async () => {
-        try {
-          const response = await axios.get(
-            `${env.baseURL}/api/videos/user/${videoId}/details`,
-          );
-          // console.log('User details response:', response.data); // Log the user details
-          const {
-            firstName: fetchedFirstName,
-            profileImage: fetchedProfileImage,
-          } = response.data;
-
-          // Convert profile image to Base64 if necessary
-          const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
-          // Update the modal with the fetched data
-          setModalFirstName(fetchedFirstName || DefaultName);
-          setModalProfileImage(base64Image || defaultProfileImageUrl);
-        } catch (error) {
-          console.error('Error fetching user details:', error);
-
-          // Reset to default values if fetching fails
-          setModalFirstName('Default Name');
-          setModalProfileImage('defaultProfileImageUrl');
-          setLikeCount(0); // Reset like count
-        }
-      };
-
-      // Fetch phone number for the current video
-      const fetchPhoneNumber = async () => {
-        try {
-          const response = await axios.get(
-            `${env.baseURL}/api/videos/getOwnerByVideoId/${videoId}`,
-          );
-          if (response.data && response.data.phoneNumber) {
-            setPhoneNumber(response.data.phoneNumber);
-            setEmail(response.data.email);
-          } else {
-            Alert.alert(
-              'Error',
-              'Owner not found or no phone number available.',
-            );
-          }
-        } catch (error) {
-          console.error('Error fetching owner data:', error);
-          Alert.alert('Error', 'Failed to fetch owner details.');
-        }
-      };
-
-      // Call the fetchPhoneNumber function
-      fetchPhoneNumber();
-
-      // Fetch all data for the current video
-      fetchLikeStatus(); // Fetch like status for the current video
-      fetchLikeCount(); // Fetch like count for the current video
-      fetchUserDetails(); // Fetch user details for the current video
-    }
-  }, [
-    selectedVideoUri,
-    currentIndex,
-    videourl,
-    userId,
-    defaultProfileImageUrl,
-  ]); // Dependencies
+  const [currentVideo, setCurrentVideo] = useState(null);
 
   useEffect(() => {
     const loadDataFromStorage = async () => {
@@ -583,8 +346,8 @@ const HomeScreen = () => {
       const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
 
       // Update the modal with the fetched data
-      setModalFirstName(fetchedFirstName || DefaultName);
-      setModalProfileImage(base64Image || defaultProfileImageUrl);
+      setModalFirstName(fetchedFirstName );
+      setModalProfileImage(base64Image );
     } catch (error) {
       console.error('Error fetching user details:', error);
 
@@ -595,7 +358,7 @@ const HomeScreen = () => {
     }
   };
 
-  const openModal = async (uri, videoId, index,useId) => {
+  const openModal = async (uri, videoId, index, useId) => {
     setVideoId(videoId);
     setSelectedUserId(useId);
     setCurrentIndex(index);
@@ -724,6 +487,147 @@ const HomeScreen = () => {
     } catch (error) {}
   };
 
+  const onViewableItemsChanged = useRef(({viewableItems}) => {
+    if (viewableItems.length > 0) {
+      const video = viewableItems[0].item; // Get the first visible video
+      const videoId = video?.id; // Ensure videoId is valid
+      if (!videoId) {
+        console.error('❌ Error: videoId is null or undefined');
+        return; // Stop execution if videoId is not valid
+      }
+
+      setCurrentVideo(video); // Update current video
+      setSelectedVideoUri(video.uri); // Set selected video URI
+      const activeSubtitle = subtitles.find(
+        subtitle =>
+          currentTime >= subtitle.startTime && currentTime <= subtitle.endTime,
+      );
+      setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : '');
+
+      const parseTimeToSeconds = timeStr => {
+        const [hours, minutes, seconds] = timeStr.split(':');
+        const [sec, milli] = seconds.split(',');
+        return (
+          parseInt(hours, 10) * 3600 +
+          parseInt(minutes, 10) * 60 +
+          parseInt(sec, 10) +
+          parseInt(milli, 10) / 1000
+        );
+      };
+
+      const parseSRT = srtText => {
+        const lines = srtText.split('\n');
+        const parsedSubtitles = [];
+        let i = 0;
+
+        while (i < lines.length) {
+          if (lines[i].match(/^\d+$/)) {
+            const startEnd = lines[i + 1].split(' --> ');
+            const startTime = parseTimeToSeconds(startEnd[0]);
+            const endTime = parseTimeToSeconds(startEnd[1]);
+            let text = '';
+            i += 2;
+            while (i < lines.length && lines[i].trim() !== '') {
+              text += lines[i] + '\n';
+              i++;
+            }
+            parsedSubtitles.push({startTime, endTime, text: text.trim()});
+          } else {
+            i++;
+          }
+        }
+        return parsedSubtitles;
+      };
+
+      const fetchSubtitles = async () => {
+        try {
+          const subtitlesUrl = `${env.baseURL}/api/videos/user/${videoId}/subtitles.srt`;
+          const response = await fetch(subtitlesUrl);
+          const text = await response.text();
+          console.log('Fetched Subtitles:', text);
+          const parsedSubtitles = parseSRT(text);
+          console.log('Parsed Subtitles:', parsedSubtitles);
+          setSubtitles(parsedSubtitles);
+        } catch (error) {
+          console.error('Error fetching subtitles:', error);
+        }
+      };
+      const fetchPhoneNumber = () => {
+        axios
+          .get(`${env.baseURL}/api/videos/getOwnerByVideoId/${videoId}`)
+          .then(response => {
+            if (response.data && response.data.phoneNumber) {
+              setPhoneNumber(response.data.phoneNumber);
+              setEmail(response.data.email);
+              console.log(response.data.phoneNumber);
+              console.log('Phone number found:', response.data.phoneNumber); // Log the phone number
+            } else {
+              Alert.alert(
+                'Error',
+                'Owner not found or no phone number available.',
+              );
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching owner data:', error); // Log the error
+          });
+      };
+      const fetchLikeStatus = async () => {
+        try {
+          const response = await axios.get(
+            `${env.baseURL}/api/videos/likes/status`,
+            {
+              params: {userId},
+            },
+          );
+          const likeStatus = response.data;
+          setIsLiked(likeStatus);
+        } catch (error) {
+          console.error('Error fetching like status:', error);
+        }
+      };
+      const fetchLikeCount = () => {
+        console.log('Fetching like count for videoId:', videoId);
+        axios
+          .get(`${env.baseURL}/api/videos/${videoId}/like-count`)
+          .then(response => {
+            console.log('API response:', response.data);
+            setLikeCount(response.data); // Update state with the correct count
+          })
+          .catch(error => {
+            console.error('Error fetching like count:', error);
+          });
+      };
+      const fetchUserDetails = async () => {
+        try {
+          const response = await axios.get(
+            `${env.baseURL}/api/videos/user/${videoId}/details`,
+          );
+          // console.log('User details response:', response.data); // Log the user details
+          const {
+            firstName: fetchedFirstName,
+            profileImage: fetchedProfileImage,
+          } = response.data;
+
+          // Convert profile image to Base64 if necessary
+          const base64Image = `data:image/jpeg;base64,${fetchedProfileImage}`;
+
+          // Update the modal with the fetched data
+          setModalFirstName(fetchedFirstName);
+          setModalProfileImage(base64Image);
+        } catch (error) {
+          console.error('Error fetching user details:', error);
+        }
+      };
+      // Fetch user details, like count, and like status
+      fetchUserDetails(videoId);
+      fetchLikeCount(videoId);
+      fetchLikeStatus(videoId);
+      fetchPhoneNumber(videoId);
+      fetchSubtitles(videoId);
+    }
+  }).current;
+
   return (
     <View style={styles.container}>
       <Header profile={profileImage} userName={firstName} />
@@ -735,7 +639,7 @@ const HomeScreen = () => {
           data={videourl}
           renderItem={({item, index}) => (
             <TouchableOpacity
-              onPress={() => openModal(item.uri, item.id, index,item.useId)} // Pass video URI and ID
+              onPress={() => openModal(item.uri, item.id, index, item.useId)} // Pass video URI and ID
               style={[
                 styles.videoItem,
                 index >= 4 && index < 8 ? styles.secondRow : null, // Apply styles to the second row
@@ -756,44 +660,45 @@ const HomeScreen = () => {
         />
       </ImageBackground>
 
-      {/* Modal for full-screen video */}
-      <Modal
+       {/* Modal for full-screen video */}
+       <Modal
         visible={isModalVisible}
         animationType="fade"
         transparent={true}
         onRequestClose={closeModal}>
-        <GestureHandlerRootView>
-          <PanGestureHandler onGestureEvent={handleGesture}>
-            <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
+        <View style={styles.modalContainer}>
+          <FlatList
+            data={videourl}
+            keyExtractor={item => item.id.toString()}
+            pagingEnabled
+            showsVerticalScrollIndicator={false}
+            snapToAlignment="start"
+            decelerationRate="fast"
+            scrollEnabled
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={{itemVisiblePercentThreshold: 50}} // Trigger when 50% visible
+            getItemLayout={(data, index) => ({
+              length: windowHeight,
+              offset: windowHeight * index,
+              index,
+            })}
+            renderItem={({item}) => (
+              <View style={[styles.modalContent, {height: windowHeight}]}>
+                {/* User Details Section */}
                 <View style={styles.userDetails}>
-                  {modalProfileImage ? (
-                    // Check if the profile image is a string (Base64 or URL)
-                    typeof modalProfileImage === 'string' ? (
-                      <Image
-                        source={{uri: modalProfileImage}} // Base64 or remote image
-                        style={styles.profileImage}
-                      />
-                    ) : (
-                      <Image
-                        source={modalProfileImage} // Local image from require()
-                        style={styles.profileImage}
-                      />
-                    )
-                  ) : (
+                  {item.profileImage && (
                     <Image
-                      source={require('./assets/defaultpropic.png')} // Fallback image
+                      source={{uri: item.profileImage}}
                       style={styles.profileImage}
                     />
                   )}
-                  <Text style={styles.userName}>
-                    {modalFirstName || 'User'}
-                  </Text>
+                  <Text style={styles.userName}>{item.firstName}</Text>
                 </View>
 
+                {/* Video Player */}
                 <View style={styles.fullScreen}>
                   <Video
-                    source={{uri: selectedVideoUri}}
+                    source={{uri: item.uri}}
                     style={styles.fullScreenVideo}
                     controls={true}
                     resizeMode="cover"
@@ -801,19 +706,26 @@ const HomeScreen = () => {
                       console.error('Video playback error:', error)
                     }
                     onProgress={({currentTime}) => {
-                      setCurrentTime(currentTime); // Update the current playback time
+                      setCurrentTime(currentTime);
                       const activeSubtitle = subtitles.find(
                         subtitle =>
                           currentTime >= subtitle.startTime &&
                           currentTime <= subtitle.endTime,
                       );
-                      console.log('Current Time:', currentTime);
-                      console.log('Active Subtitle:', activeSubtitle);
                       setCurrentSubtitle(
                         activeSubtitle ? activeSubtitle.text : '',
                       );
                     }}
                   />
+                  <View style={styles.userDetails}>
+                    {modalProfileImage && (
+                      <Image
+                        source={{uri: modalProfileImage}}
+                        style={styles.profileImage}
+                      />
+                    )}
+                    <Text style={styles.userName}>{modalFirstName}</Text>
+                  </View>
                   <TouchableOpacity
                     onPress={() => navigation.navigate('Trending')}
                     style={styles.trending1}>
@@ -836,58 +748,63 @@ const HomeScreen = () => {
                       <Ant name={'arrowleft'} size={30} color={'#ffffff'} />
                     </TouchableOpacity>
                   </View>
-                  <View style={styles.reactions}>
-                    <View style={styles.buttonheart}>
-                      <TouchableOpacity
-                        onPress={() =>
-                          isLiked[videoId] ? handleDislike() : handleLike()
-                        }>
-                        <Like
-                          name={'heart'}
-                          size={30}
-                          style={[
-                            {color: isLiked[videoId] ? 'red' : '#ffffff'}, // Dynamically change color
-                          ]}
-                        />
-                        <Text style={styles.count}>{likeCount}</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <View style={styles.buttonshare}>
-                      <TouchableOpacity onPress={shareOption}>
-                        <Shares name={'share'} size={30} color={'#ffffff'} />
-                      </TouchableOpacity>
-                    </View>
-                    <View style={styles.buttonmsg}>
-                      <TouchableOpacity onPress={sendEmail}>
-                        <Whatsapp name={'email'} size={27} color={'#ffffff'} />
-                      </TouchableOpacity>
-                    </View>
-                    <View style={styles.buttonphone}>
-                      <TouchableOpacity onPress={makeCall}>
-                        <Phone
-                          name={'phone-volume'}
-                          size={22}
-                          color={'#ffffff'}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                    <View style={styles.subtitle}>
-                      <Text
-                        style={{
-                          color: '#ffffff',
-                          fontSize: 18,
-                          textAlign: 'center',
-                          fontWeight: 800,
-                        }}>
-                        {currentSubtitle}
-                      </Text>
-                    </View>
+                  <View style={styles.buttonheart}>
+                    <TouchableOpacity
+                      onPress={() =>
+                        isLiked[videoId] ? handleDislike() : handleLike()
+                      }>
+                      <Like
+                        name={'heart'}
+                        size={30}
+                        style={[
+                          {color: isLiked[videoId] ? 'red' : '#ffffff'}, // Dynamically change color
+                        ]}
+                      />
+                      <Text style={styles.count}>{likeCount}</Text>
+                    </TouchableOpacity>
+                  </View>
+                      <View style={styles.buttonmsg}>
+                        <TouchableOpacity onPress={sendEmail}>
+                          <Whatsapp
+                            name={'email'}
+                            size={27}
+                            color={'#ffffff'}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.buttonphone}>
+                        <TouchableOpacity onPress={makeCall}>
+                          <Phone
+                            name={'phone-volume'}
+                            size={22}
+                            color={'#ffffff'}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                  <View style={styles.buttonshare}>
+                    <TouchableOpacity onPress={shareOption}>
+                      <Shares name={'share'} size={30} color={'#ffffff'} />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.subtitle}>
+                    <Text
+                      style={{
+                        color: '#ffffff',
+                        fontSize: 12,
+                        textAlign: 'center',
+                        fontWeight: 800,
+                        bottom: -30,
+                        left: 20,
+                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                      }}>
+                      {currentSubtitle}
+                    </Text>
                   </View>
                 </View>
               </View>
-            </View>
-          </PanGestureHandler>
-        </GestureHandlerRootView>
+            )}
+          />
+        </View>
       </Modal>
     </View>
   );
@@ -909,11 +826,10 @@ const styles = StyleSheet.create({
   },
   columnWrapper: {
     justifyContent: 'flex-start',
-    gap: 1,
-    marginBottom: '-2.7%',
+    aspectRatio: 2.27,
   },
   videoPlayer: {
-    height: 190,
+    height:'99%',
     width: '100%', // Adjust width for a uniform layout
   },
   imageBackground: {
@@ -931,23 +847,19 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    // justifyContent: 'center',
-    // alignItems: 'center',
-    width: '100%',
-    // backgroundColor: 'rgba(0, 0, 0, 0.8)', // Dark background for the modal
-  },
-  secondRow: {
-    marginTop: '1%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
   },
   modalContent: {
-    width: '100%',
-    height: '100%',
+    width: 'auto',
+    height: '50%',
     justifyContent: 'center',
     alignItems: 'center',
   },
   fullScreenVideo: {
     width: '100%',
-    height: '100%',
+    height: '94%',
   },
   fullScreen: {
     flex: 1,
@@ -955,7 +867,7 @@ const styles = StyleSheet.create({
   },
   userDetails: {
     position: 'absolute',
-    top: '85%',
+    top: '78%',
     left: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1057,10 +969,10 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     position: 'absolute',
-    right: 100,
-    width: 200,
+    right: 50,
+    width: 300,
     padding: 10,
-    bottom: 155,
+    bottom: '26%',
   },
 });
 

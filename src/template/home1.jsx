@@ -42,30 +42,30 @@ const Home1 = () => {
 
   const subtitlesUrl = `${env.baseURL}/api/videos/${userId}/subtitles.srt`;
 
-  useEffect(() => {
-    // Get today's date in IST (Indian Standard Time)
-    const todayDate = new Date().setHours(0, 0, 0, 0); // Set time to midnight to focus on the date only
+  // useEffect(() => {
+  //   // Get today's date in IST (Indian Standard Time)
+  //   const todayDate = new Date().setHours(0, 0, 0, 0); // Set time to midnight to focus on the date only
 
-    console.log('Today:', todayDate);
+  //   console.log('Today:', todayDate);
 
-    // Set the target disable date (Feb 23rd, 2025) in IST
-    const disableDate = new Date('2025-02-23T00:00:00+05:30').setHours(
-      0,
-      0,
-      0,
-      0,
-    ); // Set to midnight for comparison
+  //   // Set the target disable date (Feb 23rd, 2025) in IST
+  //   const disableDate = new Date('2025-02-23T00:00:00+05:30').setHours(
+  //     0,
+  //     0,
+  //     0,
+  //     0,
+  //   ); // Set to midnight for comparison
 
-    console.log('Disable Date:', disableDate);
+  //   console.log('Disable Date:', disableDate);
 
-    // Compare the dates and disable the button if today is after the target date
-    if (todayDate > disableDate) {
-      setIsDisabled(true);
-    }
-    if (todayDate < disableDate) {
-      setIsDisabled(false);
-    }
-  }, []);
+  //   // Compare the dates and disable the button if today is after the target date
+  //   if (todayDate > disableDate) {
+  //     setIsDisabled(true);
+  //   }
+  //   if (todayDate < disableDate) {
+  //     setIsDisabled(false);
+  //   }
+  // }, []);
   // Function to convert time format to seconds
   const parseTimeToSeconds = timeStr => {
     const [hours, minutes, seconds] = timeStr.split(':');
@@ -469,9 +469,18 @@ const Home1 = () => {
             </TouchableOpacity>
           ) : !hasVideo ? (
             // Show a message if no video is available
-            <Text style={styles.noVideoText}>
-              No video available. You need to upload a video.
-            </Text>
+            <>
+              <Text style={styles.noVideoText1}>
+                You haven’t uploaded your Profile Video yet. {'\n\n'}
+              </Text>
+              <Text style={styles.noVideoText}>
+                Instructions for Recording Your Video: {'\n'}• Hold your mobile
+                in portrait mode. {'\n'}• Ensure your video is at least 30
+                seconds long. {'\n'}• Review your transcription before
+                uploading. {'\n'}• Do not switch to another screen until the
+                upload is complete.
+              </Text>
+            </>
           ) : (
             // Show a message if the video is hidden due to profanity
             <Text style={styles.noVideoText}>
@@ -659,14 +668,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: '20%',
   },
-  noVideoText: {
+ noVideoText: {
     justifyContent: 'center',
     alignItems: 'center',
     fontSize: 18,
     fontWeight: '600',
-    // marginLeft: '10%',
+    textAlign: 'left',
+    marginLeft: '5%',
     color: '#ffffff',
   },
+  noVideoText1: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    color:'#ffffff',
+ },
   subtitle: {
     bottom: '25%',
     color: 'white',
