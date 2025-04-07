@@ -10,13 +10,13 @@ import org.springframework.data.repository.query.Param;
 
 public interface LikeRepository extends JpaRepository<Like, Long> {
     boolean existsByUserIdAndVideoId(Long userId, Long videoId);  // Check if a user has liked the video
-
+    Long countByUserId(Long userId);
     Long countByVideoIdAndIsLikeTrue(Long videoId);
     Optional<Like> findByUserIdAndVideoId(Long userId, Long videoId);
     
-
-    @Query("SELECT v FROM Like l JOIN Video v ON l.videoId = v.id WHERE l.userId = :userId")
-    List<Video> findLikedVideosByUserId(@Param("userId") Long userId);    
+ @Query("SELECT v FROM Like l JOIN Video v ON l.videoId = v.id WHERE l.userId = :userId")
+    List<Video> findLikedVideosByUserId(@Param("userId") Long userId); 
+      
 
     @Query("SELECT v.userId, l.videoId, COUNT(l.id) AS likeCount " +
            "FROM Like l " +

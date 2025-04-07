@@ -48,12 +48,8 @@ const LoginScreen = () => {
       );
 
       const {firstName, jobOption, userId, industry, videos} = response.data;
-
-      console.log('API Response:', response.data);
-
       if (Array.isArray(videos) && videos.length > 0 && videos[0]) {
         const videoId = videos[0].videoId || null; // Use null if videoId is not available
-        console.log('Extracted videoId:', videoId);
       } else {
         // If no videos are found, videoId is null
         const videoId = null;
@@ -90,7 +86,6 @@ const LoginScreen = () => {
         Alert.alert('Error', 'User data is incomplete.');
       }
     } catch (error) {
-      console.log('hii', error);
       console.error(
         'Login failed:',
         error.response ? error.response.data : error.message,
@@ -109,14 +104,15 @@ const LoginScreen = () => {
     videoId,
   ) => {
     try {
-      await AsyncStorage.setItem('userId', JSON.stringify(userId));
+      await AsyncStorage.setItem('userId', userId.toString()); // Store as string
       await AsyncStorage.setItem('firstName', firstName);
       await AsyncStorage.setItem('jobOption', jobOption);
       await AsyncStorage.setItem('industry', industry);
-      await AsyncStorage.setItem('videoId', JSON.stringify(videoId));
-      // Conditionally store or remove the videoId
-      console.log('stored userId', userId);
-      console.log('stored videoId', videoId);
+      if (videoId !== null && videoId !== "null") {
+        await AsyncStorage.setItem('videoId', videoId.toString()); // Store as string
+      } else {
+        await AsyncStorage.removeItem('videoId'); // Remove if null
+      }
     } catch (error) {
       console.error('Error saving data to AsyncStorage:', error);
     }
@@ -168,8 +164,6 @@ const LoginScreen = () => {
             });
 
             if (userResponse.data.exists) {
-              // User exists, log them in (Skip role selection)
-              console.log('User already signed up, logging in...');
               const {userId, jobOption, firstName, phoneNumber} =
                 userResponse.data;
               await AsyncStorage.setItem('userId', JSON.stringify(userId));
@@ -182,7 +176,6 @@ const LoginScreen = () => {
                   jobOption === 'Entrepreneur' ||
                   jobOption === 'Freelancer'
                 ) {
-                  console.log('Navigating to home1...');
                   navigation.navigate('home1', {
                     firstName,
                     email,
@@ -193,7 +186,6 @@ const LoginScreen = () => {
                   jobOption === 'Employer' ||
                   jobOption === 'Investor'
                 ) {
-                  console.log('Navigating to HomeScreen...');
                   navigation.navigate('HomeScreen', {
                     firstName,
                     email,
@@ -202,8 +194,6 @@ const LoginScreen = () => {
                   });
                 }
               } else {
-                // User does not have a phone number, navigate to EditScreen
-                console.log('Navigating to EditScreen...');
                 navigation.navigate('Edit', {
                   firstName: given_name,
                   email,
@@ -239,14 +229,10 @@ const LoginScreen = () => {
 
   const handleRoleSelect = async role => {
     if (!userData) {
-      console.log('No user data available. Exiting handleRoleSelect.');
       return;
     }
 
     const {email, given_name} = userData;
-    console.log('User data received:', {email, given_name});
-
-    // Function to check if the email is from a public domain
     const isPublicDomain = email => {
       const publicDomains = [
         'gmail.com',
@@ -259,16 +245,10 @@ const LoginScreen = () => {
     };
 
     try {
-      // Step 1: Check if the user exists in the database
-      console.log('Checking if user exists in the database...');
       const response = await axios.get(`${env.baseURL}/users/check`, {
         params: {email},
       });
-
-      console.log('Database response:', response.data);
-
       if (response.status === 200 && response.data.exists) {
-        console.log('User already exists in the database.');
 
         const {jobOption, userId, firstName} = response.data;
 
@@ -290,7 +270,6 @@ const LoginScreen = () => {
 
         // Navigate based on jobOption
         if (role === 'Employer' || role === 'Investor') {
-          console.log('Navigating to HomeScreen...');
           navigation.navigate('Edit', {
             firstName: given_name,
             email,
@@ -298,7 +277,6 @@ const LoginScreen = () => {
             userId,
           });
         } else if (role === 'Employee' || role === 'Entrepreneur') {
-          console.log('Navigating to home1...');
           navigation.navigate('Edit', {
             firstName: given_name,
             email,
@@ -307,8 +285,6 @@ const LoginScreen = () => {
           });
         }
       } else {
-        console.log('User does not exist. Prompting for role selection.');
-
         if (!role) {
           console.error('Role not selected. Prompting user.');
           Alert.alert('Wezume', 'Please select a role before continuing.');
@@ -324,19 +300,12 @@ const LoginScreen = () => {
           );
           return;
         }
-
-        console.log('Saving new user details to the database...');
         const saveResponse = await axios.post(`${env.baseURL}/users`, {
           firstName: given_name,
           email,
           jobOption: role,
         });
-
-        console.log('Save response:', saveResponse.data);
-
         if (saveResponse.status === 201) {
-          console.log('User details saved successfully.');
-
           await AsyncStorage.setItem(
             'userId',
             JSON.stringify(saveResponse.data.userId),
@@ -347,7 +316,6 @@ const LoginScreen = () => {
 
           if (saveResponse.data.phoneNumber) {
             if (role === 'Employer' || role === 'Investor') {
-              console.log('Navigating to HomeScreen...');
               navigation.navigate('HomeScreen', {
                 firstName: given_name,
                 email,
@@ -355,7 +323,6 @@ const LoginScreen = () => {
                 userId: saveResponse.data.userId,
               });
             } else if (role === 'Employee' || role === 'Entrepreneur') {
-              console.log('Navigating to home1...');
               navigation.navigate('home1', {
                 firstName: given_name,
                 email,
@@ -364,7 +331,6 @@ const LoginScreen = () => {
               });
             }
           } else {
-            console.log('Navigating to EditScreen...');
             navigation.navigate('Edit', {
               firstName: given_name,
               email,

@@ -12,32 +12,43 @@ public class Video {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
     private String fileName;
-    
-    @Lob
-    @Column(name = "video_data", columnDefinition = "LONGBLOB")
-    private byte[] videoData; // Field to store video as byte array
-
     private String filePath;
     private String audioFilePath; 
     private Long userId;
-    
+
+    private String url ;
     @Column(name = "transcription", columnDefinition = "LONGTEXT")
     private String transcription; // Add transcription field
-
+    private String thumbnailurl;// Field to store video as byte array
     public Video() {}
 
     // Add this constructor to match the parameters being passed in the service
-    public Video(String fileName, byte[] videoData,Long userId, String transcription, String audioFilePath) {
+    public Video(String fileName, String thumbnailurl, Long userId, String transcription, String audioFilePath, String url) {
         this.fileName = fileName;
-        this.videoData = videoData;
+        this.thumbnailurl = thumbnailurl;
         this.userId = userId;
         this.transcription = transcription;
         this.audioFilePath = audioFilePath;
+        this.url = url;
     }
 
-    // Getters and Setters
+    public String getThumbnailUrl() {
+        return thumbnailurl;
+    }
+
+    public void setThumbnailUrl(String thumbnailurl) {
+        this.thumbnailurl = thumbnailurl;
+    }
+
+    public String getUrl(){
+        return url;
+    }
+
+    public void setUrl(String url){
+        this.url=url;
+    }
+
     public Long getId() {
         return id;
     }
@@ -52,14 +63,6 @@ public class Video {
 
     public void setFileName(String fileName) {
         this.fileName = fileName;
-    }
-
-    public byte[] getVideoData() {
-        return videoData;
-    }
-
-    public void setVideoData(byte[] videoData) {
-        this.videoData = videoData;
     }
 
     public String getFilePath() {

@@ -29,23 +29,18 @@ public class FFmpegService {
         // Path to the watermark image
         String watermarkPath = "/home/wezume/htdocs/wezume.in/img/watermark.png";
 
-        // Command to overlay watermark with scaling applied only to watermark
         String[] command = {
             ffmpegPath,
-            "-i", inputFile.getAbsolutePath(),        // Input video file
-            "-i", watermarkPath,                      // Watermark file
-            "-filter_complex",
-            "[0:v]split[bg][fg];" +                   // Split the input into two streams: background and foreground
-            "[bg]boxblur=30:20[blurred];" +            // Apply blur to the background
-            "[blurred][fg]overlay=format=auto[blur_fg];" + // Combine blurred background with the foreground
-            "[1:v]scale=300:150[wm];" +               // Scale the watermark
-            "[blur_fg][wm]overlay=x=W-w-80:y=100",     // Overlay the watermark on top
+            "-i", inputFile.getAbsolutePath(),
+            "-i", watermarkPath,
+            "-filter_complex", "[1:v]scale=300:150[wm];[0:v][wm]overlay=x=W-w-80:y=20",
             "-vcodec", "libx264",
             "-preset", "ultrafast",
             "-crf", "30",
             "-f", "mp4",
             outputFile.getAbsolutePath()
         };
+
         
 
         // Log the command for debugging

@@ -23,10 +23,6 @@ import Media from 'react-native-vector-icons/Entypo';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import {request, PERMISSIONS, RESULTS} from 'react-native-permissions';
-import * as tf from '@tensorflow/tfjs';
-import * as bodySegmentation from '@tensorflow-models/body-segmentation';
-import {SelfieSegmentation} from '@mediapipe/selfie_segmentation';
-import '@tensorflow/tfjs-react-native';
 import axios from 'axios';
 import env from './env';
 
@@ -45,8 +41,8 @@ const CameraPage = () => {
   const [isUploading, setUploading] = useState(false);
   const [isFrontCamera, setIsFrontCamera] = useState(false);
   const [videoUri, setVideoUri] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [videos, setVideos] = useState([]);
-  const [segmentationModal, setSegmentationModal] = useState(null);
   const cameraRef = useRef(null);
   const {hasPermission, requestPermission} = useCameraPermission();
   let timerInterval = useRef(null);
@@ -63,25 +59,6 @@ const CameraPage = () => {
       [{text: 'OK', onPress: () => console.log('OK Pressed')}],
       {cancelable: false},
     );
-
-    const loadModel = async () => {
-      try {
-        await tf.ready();
-        await tf.setBackend('cpu');
-        console.log('====================================');
-        console.log(tf.getBackend());
-        console.log('tensorflow ready');
-        console.log('====================================');
-const config =  {modelType:'general',runtime:'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation'};
-        const model = await bodySegmentation.createSegmenter(bodySegmentation.SupportedModels.BodyPix,config
-         );
-        // setSegmentationModal(model);
-        console.log('Model loaded:', model);
-      } catch (error) {
-        console.error('Error loading model:', error);
-      }
-    };
-    loadModel();
   }, []);
 
   useEffect(() => {
@@ -151,6 +128,7 @@ const config =  {modelType:'general',runtime:'mediapipe', solutionPath: 'https:/
     }
 
     setUploading(true);
+    setUploadProgress(0); // Reset progress when starting upload
 
     let formattedUri =
       Platform.OS === 'android' ? 'file://' + videoUri : videoUri;
@@ -171,6 +149,12 @@ const config =  {modelType:'general',runtime:'mediapipe', solutionPath: 'https:/
           headers: {
             'Content-Type': 'multipart/form-data',
           },
+          onUploadProgress: progressEvent => {
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total,
+            );
+            setUploadProgress(percent); // Update the progress state
+          },
         },
       );
 
@@ -179,7 +163,6 @@ const config =  {modelType:'general',runtime:'mediapipe', solutionPath: 'https:/
       const {filePath, fileName, id} = response.data;
       if (filePath && id) {
         alert('Video uploaded successfully!');
-
         const videoUrl = `${env.baseURL}/${filePath.replace(/\\/g, '/')}`;
         const newvideos = {
           id,
@@ -256,17 +239,9 @@ const config =  {modelType:'general',runtime:'mediapipe', solutionPath: 'https:/
     }
   };
 
-   const openTutorial = () => {
-      const url = 'https://wezume.com/wezume-demo-video.mp4';
-      Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
-    };
-
-  const processFrame = async frame => {
-    if (!segmentationModal) {
-      return;
-    }
-
-    const segmentation = await segmentationModal.segmentPeople(frame);
+  const openTutorial = () => {
+    const url = 'https://wezume.com/wezume-demo-video.mp4';
+    Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
   };
 
   return (
@@ -286,7 +261,6 @@ const config =  {modelType:'general',runtime:'mediapipe', solutionPath: 'https:/
         audio={true} // Ensure audio is enabled
         torch={onFlash}
         format={format}
-        onFrameProcessor={processFrame}
         fps={fps}
       />
 
@@ -383,15 +357,20 @@ const config =  {modelType:'general',runtime:'mediapipe', solutionPath: 'https:/
             </View>
           </View>
           {/* Loading Spinner */}
-          {isUploading && (
-            <View style={styles.uploadingOverlay}>
-              <ActivityIndicator size="large" color="white" />
-              <Text style={styles.uploadingText}>Uploading...</Text>
-            </View>
-          )}
+          {/* Loading Spinner */}
+      {isUploading && (
+        <View style={styles.uploadingOverlay}>
+          <ActivityIndicator size="large" color="white" />
+          <Text style={styles.uploadingText}>
+            Uploading... {uploadProgress}%
+          </Text>
+          {/* Displaying the progress here */}
+        </View>
+      )}
         </Modal>
       )}
 
+      {/* Show Modal Button */}
       {/* Show Modal Button */}
       {videoPath && !isRecording && currentTimer <= 30 && (
         <TouchableOpacity
@@ -506,23 +485,22 @@ const styles = StyleSheet.create({
   },
   uploadingOverlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    height:'100%',
+    width:'100%',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',  // To make the overlay dark
+    padding: 20,
+    borderRadius: 10,
   },
   uploadingText: {
     color: 'white',
-    marginTop: 10,
     fontSize: 16,
-    fontWeight: 'bold',
+    marginTop: 10,
   },
   switchCameraButton: {
     position: 'absolute',
-    bottom:'8%',
+    bottom: '8%',
     left: '25%',
     transform: [{translateX: -50}],
     padding: 10,

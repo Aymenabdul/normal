@@ -40,6 +40,7 @@ const Edit = () => {
   const [languages, setLanguages] = useState(['']);
   const navigation = useNavigation();
   const [base64Image, setBase64Image] = useState(null);
+  const [isImageUploaded, setIsImageUploaded] = useState(false); // Add state for image upload status
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isIndustryDropdownOpen, setIsIndustryDropdownOpen] = useState(false);
   const [industrySearchText, setIndustrySearchText] = useState('');
@@ -258,7 +259,7 @@ const Edit = () => {
     }
   };
   const checkIfEmailExists = async email => {
-      try {
+    try {
       const response = await axios.post(
         `${env.baseURL}/userscheck-email`,
         {email}, // Wrapping email in an object
@@ -304,10 +305,10 @@ const Edit = () => {
             '',
           );
           // Now you can set the cleanBase64String to your form data
-          setBase64Image(cleanBase64String);
         } catch (error) {
           console.error('Error converting image to Base64: ', error);
         }
+        setIsImageUploaded(true); // Set image upload status to true
       }
     });
   };
@@ -386,10 +387,14 @@ const Edit = () => {
         {
           text: 'OK',
           onPress: () => {
-            if (jobOption === 'Employee' || jobOption === 'Entrepreneur' || jobOption === 'Freelancer') { 
-              navigation.navigate('home1'); // Navigate to 'HomeOne' 
-            } else if (jobOption === 'Employer' || jobOption === 'Investor') { 
-              navigation.navigate('HomeScreen'); // Navigate to 'Home' 
+            if (
+              jobOption === 'Employee' ||
+              jobOption === 'Entrepreneur' ||
+              jobOption === 'Freelancer'
+            ) {
+              navigation.navigate('home1'); // Navigate to 'HomeOne'
+            } else if (jobOption === 'Employer' || jobOption === 'Investor') {
+              navigation.navigate('HomeScreen'); // Navigate to 'Home'
             } else {
               navigation.goBack(); // Default: go back
             }
@@ -1089,8 +1094,13 @@ const Edit = () => {
           {/* Profile Picture Upload Button */}
           <TouchableOpacity
             onPress={handleProfilePic}
-            style={styles.uploadButton}>
-            <Text style={styles.uploadButtonText}>Upload Profile Picture</Text>
+            style={[
+              styles.uploadButton,
+              isImageUploaded && {backgroundColor: 'green'}, // Change color to green if uploaded
+            ]}>
+            <Text style={styles.uploadButtonText}>
+              {isImageUploaded ? 'Image Uploaded' : 'Upload Profile Picture'}
+            </Text>
             <UploadImage name={'file-image-plus'} size={20} color={'white'} />
           </TouchableOpacity>
           {/* </> */}
@@ -1172,14 +1182,14 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: '#ffffff',
-    padding:10,
+    padding: 10,
     marginBottom: 10,
     borderRadius: 5,
     paddingLeft: 15,
     color: 'black',
     backgroundColor: '#ffffff',
-    fontSize:18,
-    fontWeight:'500',
+    fontSize: 18,
+    fontWeight: '500',
   },
   label: {
     fontSize: 16,
@@ -1188,7 +1198,7 @@ const styles = StyleSheet.create({
   },
   picker: {
     width: '100%',
-    overflow:'hidden',
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#ffffff', // Use a visible border color
     marginBottom: 10,
@@ -1212,8 +1222,8 @@ const styles = StyleSheet.create({
     marginTop: 15,
     textAlign: 'center',
     color: '#000',
-    fontWeight:'700',
-    fontSize:16,
+    fontWeight: '700',
+    fontSize: 16,
   },
   signupButton: {
     height: 40,
@@ -1246,7 +1256,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '700',
     marginLeft: '19%',
-    fontSize:18,
+    fontSize: 18,
   },
   dropdownButton: {
     paddingVertical: 10,
@@ -1260,8 +1270,8 @@ const styles = StyleSheet.create({
   },
   dropdownButtonText: {
     color: '#000',
-    fontSize:18,
-    fontWeight:'500',
+    fontSize: 18,
+    fontWeight: '500',
   },
   dropdownContainer: {
     backgroundColor: '#fff',
@@ -1303,13 +1313,13 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: '#FFF',
     fontWeight: '700',
-    fontSize:16,
+    fontSize: 16,
   },
   removeButton: {
     backgroundColor: '#007BFF',
     padding: 5,
     borderRadius: 5,
-    width:'25%',
+    width: '25%',
     marginTop: -3,
     marginBottom: 5,
     alignSelf: 'flex-end',
@@ -1317,8 +1327,8 @@ const styles = StyleSheet.create({
   removeButtonText: {
     color: '#FFF',
     fontWeight: '700',
-    textAlign:'center',
-    fontSize:16,
+    textAlign: 'center',
+    fontSize: 16,
   },
 });
 

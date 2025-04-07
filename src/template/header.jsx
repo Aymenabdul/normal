@@ -214,58 +214,76 @@ const Header = ({Value, profile, userName, userId}) => {
             <TouchableOpacity style={styles.closeButton} onPress={toggleMenu}>
               <Text style={styles.closeButtonText}>X</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('Account')}>
+            <TouchableOpacity onPress={() => {
+              navigation.navigate('Account');
+              toggleMenu();
+            }}>
               <Text style={styles.options}>
-                <User name={'user'} size={20} color={'grey'} /> Profile
+                <User name={'user'} size={20} color={'grey'} />   Profile
               </Text>
             </TouchableOpacity>
             <View style={styles.line}></View>
             <TouchableOpacity
-              onPress={() => [
-                navigation.navigate('profile'),
-                setIsModalVisible(false),
-              ]}>
+              onPress={() => {
+                navigation.navigate('profile');
+                setIsModalVisible(false);
+                toggleMenu();
+              }
+              }>
               <Text style={styles.options}>
-                <Search name={'search'} size={22} color={'grey'} /> Search
+                <Search name={'search'} size={22} color={'grey'} />   Search
               </Text>
             </TouchableOpacity>
             {/* Check if the user's job role is 'employee' or 'entrepreneur' */}
-            {(jobOption === 'Employee' || jobOption === 'Entrepreneur') && (
-              <>
+            {/* {(jobOption === 'Employee' || jobOption === 'Entrepreneur') && (
+              <> */}
                 <View style={styles.line}></View>
                 <TouchableOpacity
-                  onPress={() =>
-                    navigation.navigate('Myvideos', {userName, userId})
+                  onPress={() => {
+                    navigation.navigate('Myvideos', {userName, userId});
+                    toggleMenu();
+                  }
                   }>
                   <Text style={styles.options}>
-                    <Video name={'video'} size={22} color={'grey'} /> Videos
+                    <Video name={'video'} size={22} color={'grey'} />   Videos
                   </Text>
                 </TouchableOpacity>
-              </>
-            )}
+              {/* </>
+            )} */}
             <View style={styles.line}></View>
-            <TouchableOpacity onPress={openTutorial}>
+            <TouchableOpacity onPress={() => {
+              openTutorial();
+              toggleMenu();
+            }}>
               <Text style={styles.options}>
-                <Video name={'comment-video'} size={22} color={'grey'} />
-                Tutorial Video
+                <Video name={'comment-video'} size={22} color={'grey'} />   Tutorial Video
               </Text>
             </TouchableOpacity>
             <View style={styles.line}></View>
-            <TouchableOpacity onPress={openFaq}>
+            <TouchableOpacity onPress={() => {
+              openFaq();
+              toggleMenu();
+            }}>
               <Text style={styles.options}>
-                <Faq name={'questioncircle'} size={20} color={'grey'} /> FAQ
+                <Faq name={'questioncircle'} size={20} color={'grey'} />   FAQ
               </Text>
             </TouchableOpacity>
             <View style={styles.line}></View>
-            <TouchableOpacity onPress={logouts}>
+            <TouchableOpacity onPress={() => {
+              logouts();
+              toggleMenu();
+            }}>
               <Text style={styles.options}>
-                <Logout name={'logout'} size={20} color={'grey'} /> Logout
+                <Logout name={'logout'} size={20} color={'grey'} />   Logout
               </Text>
             </TouchableOpacity>
             <View style={styles.line}></View>
-            <TouchableOpacity onPress={openPrivacyPolicy}>
+            <TouchableOpacity onPress={() => {
+              openPrivacyPolicy();
+              toggleMenu();
+            }}>
               <Text style={styles.options}>
-                <Privacy name={'privacy-tip'} size={20} color={'grey'} /> Privacy Policy
+                <Privacy name={'privacy-tip'} size={20} color={'grey'} />  Privacy Policy
               </Text>
             </TouchableOpacity>
             <View style={styles.line}></View>

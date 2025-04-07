@@ -82,8 +82,8 @@ android {
         applicationId "com.vprofile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 15
-        versionName "1.15"
+        versionCode 29
+        versionName "1.29"
     }
     signingConfigs {
         debug {
@@ -102,11 +102,9 @@ android {
 }
 
 dependencies {
-    // The version of react-native is set by the React Native Gradle Plugin
-    // implementation project(':stream-io_react-native-webrtc')
-//    implementation project(':react-native-video-filters')
     implementation("com.facebook.react:react-android")
     implementation project(':react-native-vector-icons')
+    implementation 'com.google.android.exoplayer:exoplayer:2.17.1'
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

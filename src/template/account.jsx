@@ -216,7 +216,7 @@ const ProfileScreen = () => {
         source={require('./assets/login.jpg')}
         style={styles.bodycont}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Back name={'back'} size={20} style={styles.backoption} />
+          <Back name={'leftcircle'} size={24} style={styles.backoption} />
         </TouchableOpacity>
       </ImageBackground>
       <View style={styles.container}>
@@ -453,7 +453,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'gray',
     padding:10,
-    
   },
   viewMore: {
     color: '#007bff',
@@ -463,7 +462,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     padding: 10,
     marginLeft: '3%',
-    marginTop: '2%',
+    marginTop: '5%',
   },
 });
 

@@ -144,32 +144,24 @@ const Profile = () => {
       industry: industry && industry.length > 0 ? industry[0] : '',
       city: city && city.length > 0 ? city[0] : '',
     };
-
-    console.log('Sending filter data:', filterData); // Log the data being sent
-
     setLoading(true);
-
     try {
       const response = await axios.post(
         `${env.baseURL}/api/videos/filter`,
         filterData,
       );
       const filteredVideo = response.data;
-      console.log('Filtered videos received:', filteredVideo);
-
       if (Array.isArray(filteredVideo) && filteredVideo.length > 0) {
         const videosWithUri = filteredVideo.map(video => ({
           ...video,
           uri: `${env.baseURL}/api/videos/user/${video.userId}`,
         }));
-
         setFilteredVideos(videosWithUri);
         navigation.navigate('Filtered', {
           filteredVideos: videosWithUri,
           isFiltered: true,
         });
       } else {
-        // Show a popup and navigate back to Filtered
         alert('No videos found for the selected filter.');
         navigation.navigate('Filtered', {
           filteredVideos: [],
