@@ -4,13 +4,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Initial = () => {
     const navigation = useNavigation();
-
+   console.log("initial running")
     useEffect(() => {
         const checkJobOption = async () => {
             try {
                 const jobOption = await AsyncStorage.getItem('jobOption');
+                console.log(jobOption,"jobOption")
                 if (jobOption) {
-                    if (jobOption === 'Employee' || jobOption === 'Entrepreneur') {
+                    if (jobOption === 'Employee' || jobOption === 'Entrepreneur' || jobOption === "Freelancer") {
                         navigation.navigate('home1');
                     } else if (jobOption === 'Employer' || jobOption === 'Investor') {
                         navigation.navigate('HomeScreen');

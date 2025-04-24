@@ -357,7 +357,7 @@ const Home1 = () => {
       if (!videoUri) {
         throw new Error('No video URL received from backend');
       }
-
+     console.log("home running")
       // Now check for profanity
       const videoResponse = await fetch(
         `${env.baseURL}/api/videos/check-profane`,
