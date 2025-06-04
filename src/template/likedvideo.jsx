@@ -19,6 +19,7 @@ import {useNavigation} from '@react-navigation/native';
 import {PermissionsAndroid, Platform} from 'react-native';
 import env from './env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { log } from 'console';
 
 const MyVideos = () => {
   const navigation = useNavigation();
@@ -78,57 +79,90 @@ const MyVideos = () => {
     return () => {
       BackHandler.removeEventListener('hardwareBackPress', backAction);
     };
-  }, []);
+  }, [navigation]);
 
   useEffect(() => {
-    if (userId) {
-      // Ensure userId is defined
-      const fetchVideos = async userId => {
-        if (fetching) return; // Prevent multiple fetch calls
-        setFetching(true);
-        console.log('Fetching videos...'); // Add this line to verify when the function is called
-        try {
-          setLoading(true);
-          const response = await fetch(
-            `${env.baseURL}/api/videos/liked?userId=${userId}`,
-          );
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(
-              `Failed to fetch videos: ${response.status} ${response.statusText} - ${errorText}`,
-            );
-          }
-          const videoData = await response.json();
-          processVideoData(videoData);
-        } catch (error) {
-          console.error('Error fetching videos:', error);
-          setHasVideo(false);
-        } finally {
-          setLoading(false);
-          setFetching(false); // Reset fetching state
-        }
-      };
+  const fetchLikedVideos = async () => {
+    if (fetching) return; // Prevent multiple fetch calls
+    setFetching(true);
+    console.log('Fetching liked videos or loading from cache...');
 
-      const processVideoData = async videoData => {
-        if (!Array.isArray(videoData) || videoData.length === 0) {
-          console.warn('No videos available');
-          setVideoUrl([]);
-          setHasVideo(false);
-          return;
+    try {
+      setLoading(true);
+
+      const cacheKey = `likedVideos_${userId}`;
+
+      // Check cache first
+      const cachedVideos = await AsyncStorage.getItem(cacheKey);
+      if (cachedVideos) {
+        console.log('Loading liked videos from cache');
+        const parsedVideos = JSON.parse(cachedVideos);
+        setVideoUrl(parsedVideos);
+        setHasVideo(parsedVideos.length > 0);
+        return;
+      }
+
+      // If no cache found, call API
+      const fetchUrl = `${env.baseURL}/api/videos/liked?userId=${userId}`;
+      console.log(`No cache found, fetching liked videos from API: ${fetchUrl}`);
+
+      const response = await fetch(fetchUrl);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch liked videos. Status: ${response.status} - ${errorText}`);
+      }
+
+      const videoData = await response.json();
+
+      if (!Array.isArray(videoData) || videoData.length === 0) {
+        console.warn('No liked videos available');
+        setVideoUrl([]);
+        setHasVideo(false);
+        return;
+      }
+
+      const videoURIs = [];
+      for (let index = 0; index < videoData.length; index++) {
+        const video = videoData[index];
+        console.log(`Processing liked video ${index + 1}/${videoData.length}`);
+        if (!video.videoUrl) {
+          console.warn(`Liked video at index ${index} has no URL`);
+          continue;
         }
-        const videoURIs = videoData.map(video => ({
+        videoURIs.push({
           Id: video.id,
           uri: video.videoUrl,
-          thumbnail: video.thumbnail, // Use pre-existing thumbnail URL from API
-        }));
-        setVideoUrl(videoURIs);
-        setHasVideo(true);
-        setLoadingThumbnails(false); // Stop showing the loading indicator
-      };
+          thumbnail: video.thumbnail,
+        });
 
-      fetchVideos(userId);
+        // Progressive update
+        setVideoUrl([...videoURIs]);
+        if (index === 0) {
+          setLoadingThumbnails(false);
+        }
+      }
+
+      setVideoUrl(videoURIs); // Final update
+      setHasVideo(true);
+
+      // Save to cache
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(videoURIs));
+      console.log('Liked videos cached successfully');
+    } catch (error) {
+      console.error('Error fetching liked videos:', error.message || error);
+      setHasVideo(false);
+    } finally {
+      setLoading(false);
+      setLoadingThumbnails(false);
+      setFetching(false);
     }
-  }, [userId]);
+  };
+
+  fetchLikedVideos();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [userId]);
+
 
 
   const fetchProfilePic = async userId => {

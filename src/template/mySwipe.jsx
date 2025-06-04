@@ -23,6 +23,7 @@ import Like from 'react-native-vector-icons/Foundation';
 import Share from 'react-native-share'; // Import the share module
 import Phone from 'react-native-vector-icons/FontAwesome6';
 import Whatsapp from 'react-native-vector-icons/Entypo';
+import Score from 'react-native-vector-icons/MaterialCommunityIcons';
 import RNFS from 'react-native-fs';
 import env from './env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -48,8 +49,8 @@ const MySwipe = () => {
   const [currentSubtitle, setCurrentSubtitle] = useState('');
   const [page, setPage] = useState(0);
   const pageSize = 1;
+  const videoCacheRef = useRef(new Set());
   const [isVideoLoading, setIsVideoLoading] = useState(true); // State to manage video loading
-
   const route = useRoute();
   const selectedVideoId = route?.params?.videoId ?? '';
   const selectedIndex = route?.params?.index ?? '';
@@ -120,12 +121,10 @@ const MySwipe = () => {
     };
   }, [navigation]);
   useEffect(() => {
-    const fetchVideos = async (page = 0, size = 10) => {
+    const fetchVideos = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
-          `${env.baseURL}/api/videos/paging?page=${page}&size=${size}`,
-        );
+        const response = await fetch(`${env.baseURL}/api/videos/videos`);
 
         if (!response.ok) {
           throw new Error(`Failed to fetch videos: ${response.statusText}`);
@@ -152,23 +151,23 @@ const MySwipe = () => {
           thumbnail: video.thumbnail || null, // Ensure thumbnail is set or null
         }));
 
-        setVideoUrl(prevVideos => {
-          const filteredVideos = newVideos.filter(
-            video => video.uri !== selectedVideoUri, // Prevents duplication
-          );
-
-          const uniqueVideos = [...prevVideos, ...filteredVideos].filter(
-            (video, index, self) =>
-              index === self.findIndex(v => v.uri === video.uri),
-          );
-
-          return uniqueVideos.map((video, idx) => ({
-            ...video,
-            key: `video-${video.id}-${idx}`,
-          }));
+        // Filter out cached videos
+        const uncachedVideos = newVideos.filter(video => {
+          if (videoCacheRef.current.has(video.uri)) return false;
+          videoCacheRef.current.add(video.uri); // Add to cache
+          return true;
         });
 
-        setPage(prevPage => prevPage + 1);
+        if (uncachedVideos.length > 0) {
+          setVideoUrl(prevVideos => [
+            ...prevVideos,
+            ...uncachedVideos.map((video, idx) => ({
+              ...video,
+              key: `video-${video.id}-${idx}`,
+            })),
+          ]);
+        }
+
         setHasVideo(true);
       } catch (error) {
         console.error('Error fetching videos:', error);
@@ -178,8 +177,8 @@ const MySwipe = () => {
       }
     };
 
-    fetchVideos(page, pageSize);
-  }, [userId, page, selectedVideoUri]);
+    fetchVideos();
+  }, []);
 
   useEffect(() => {
     const fetchLikeCount = async () => {
@@ -330,11 +329,11 @@ const MySwipe = () => {
           'Failed to download the thumbnail. Status code:',
           downloadResult.statusCode,
         );
-        Alert.alert('Error', 'Unable to download the thumbnail for sharing.');
+        console.error('Error', 'Unable to download the thumbnail for sharing.');
       }
     } catch (error) {
       console.error('Error sharing video:', error);
-      Alert.alert(
+      console.error(
         'Error',
         'An error occurred while preparing the share option.',
       );
@@ -496,6 +495,11 @@ const MySwipe = () => {
           decelerationRate="fast"
           snapToInterval={windowHeight}
           scrollEnabled
+          onEndReached={() => {
+            console.log('Reached end, loading more videos...');
+            setPage(prev => prev + 1); // 👈 this will trigger fetch via useEffect
+          }}
+          onEndReachedThreshold={0.5}
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={{itemVisiblePercentThreshold: 80}} // Trigger when 80% visible
           getItemLayout={(data, index) => ({
@@ -503,9 +507,6 @@ const MySwipe = () => {
             offset: windowHeight * index,
             index,
           })}
-          initialScrollIndex={
-            parseInt(selectedIndex, 10) >= 0 ? parseInt(selectedIndex, 10) : 0
-          } // Always scroll to the selected index
           initialNumToRender={1} // Load one video at a time
           maxToRenderPerBatch={1} // Render one video at a time
           windowSize={1} // Render only one video at a time
@@ -532,7 +533,7 @@ const MySwipe = () => {
                 )}
                 <Video
                   // ref={ref => (videoRefs.current[index] = ref)} // Store reference to video player
-                  source={{uri: item.uri}}
+                  source={{uri: item.uri}} // Use the video URL from the data
                   style={styles.fullScreenVideo}
                   controls={true}
                   automaticallyWaitsToMinimizeStalling={false}
@@ -608,6 +609,11 @@ const MySwipe = () => {
                         <Whatsapp name={'email'} size={27} color={'#ffffff'} />
                       </TouchableOpacity>
                     </View>
+                    <View style={styles.buttonscore}>
+                  <TouchableOpacity onPress={() => navigation.navigate('ScoringScreen')}>
+                    <Score name={'speedometer'} size={30} color={'red'} />
+                  </TouchableOpacity>
+                </View>
                     <View style={styles.buttonphone}>
                       <TouchableOpacity onPress={() => makeCall(item)}>
                         <Phone
@@ -729,6 +735,16 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   buttonshare: {
+    position: 'absolute',
+    top: '67%',
+    right: 27,
+    color: '#ffffff',
+    fontSize: 30,
+    zIndex: 10,
+    elevation: 10,
+    padding: 10,
+  },
+  buttonscore: {
     position: 'absolute',
     top: '67%',
     right: 27,

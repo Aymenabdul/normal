@@ -78,26 +78,42 @@ const Myvideos = () => {
     return () => {
       BackHandler.removeEventListener('hardwareBackPress', backAction);
     };
-  }, []);
+  }, [navigation]);
 
   useEffect(() => {
     const fetchVideos = async () => {
       if (fetching) return; // Prevent multiple fetch calls
       setFetching(true);
-      console.log('Fetching videos...'); // Add this line to verify when the function is called
+      console.log('Fetching videos or loading from cache...');
+
       try {
         setLoading(true);
+
+        // Check cache first
+        const cachedVideos = await AsyncStorage.getItem('cachedVideos');
+        if (cachedVideos) {
+          console.log('Loading videos from cache');
+          const parsedVideos = JSON.parse(cachedVideos);
+          setVideoUrl(parsedVideos);
+          setHasVideo(parsedVideos.length > 0);
+          return;
+        }
+
+        // If no cache found, call API
+        console.log('No cache found, fetching from API...');
         const response = await fetch(`${env.baseURL}/api/videos/videos`);
         if (!response.ok) {
           throw new Error(`Failed to fetch videos: ${response.statusText}`);
         }
         const videoData = await response.json();
+
         if (!Array.isArray(videoData) || videoData.length === 0) {
           console.warn('No videos available');
           setVideoUrl([]);
           setHasVideo(false);
           return;
         }
+
         const videoURIs = [];
         for (let index = 0; index < videoData.length; index++) {
           const video = videoData[index];
@@ -109,26 +125,33 @@ const Myvideos = () => {
           videoURIs.push({
             Id: video.id,
             uri: video.videoUrl,
-            thumbnail: video.thumbnail, // Directly using the thumbnail from the API response
+            thumbnail: video.thumbnail,
           });
-          setVideoUrl([...videoURIs]); // Update state with the new videos as they are ready
+          setVideoUrl([...videoURIs]); // Update state progressively
           if (index === 0) {
-            setLoadingThumbnails(false); // Stop showing the loading indicator as soon as the first video is ready
+            setLoadingThumbnails(false);
           }
         }
-        setVideoUrl(videoURIs); // Update state with the new videos once
+
+        setVideoUrl(videoURIs); // Final full update
         setHasVideo(true);
+
+        // Save to cache
+        await AsyncStorage.setItem('cachedVideos', JSON.stringify(videoURIs));
+        console.log('Videos cached successfully');
       } catch (error) {
         console.error('Error fetching videos:', error);
         setHasVideo(false);
       } finally {
         setLoading(false);
         setLoadingThumbnails(false);
-        setFetching(false); // Reset fetching state
+        setFetching(false);
       }
     };
+
     fetchVideos();
-  }, [userId]); // Remove videoId from dependencies to avoid multiple callsr
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]); // you don't need to add 'fetching' into dependencies
 
   const fetchProfilePic = async userId => {
     try {

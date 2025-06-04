@@ -1,11 +1,14 @@
 package com.example.vprofile;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
+import jakarta.persistence.PrePersist;
 
 @Entity
 public class Video {
@@ -14,17 +17,27 @@ public class Video {
     private Long id;
     private String fileName;
     private String filePath;
-    private String audioFilePath; 
+    private String audioFilePath;
     private Long userId;
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
-    private String url ;
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+    }
+
+    private String url;
     @Column(name = "transcription", columnDefinition = "LONGTEXT")
     private String transcription; // Add transcription field
     private String thumbnailurl;// Field to store video as byte array
-    public Video() {}
+
+    public Video() {
+    }
 
     // Add this constructor to match the parameters being passed in the service
-    public Video(String fileName, String thumbnailurl, Long userId, String transcription, String audioFilePath, String url) {
+    public Video(String fileName, String thumbnailurl, Long userId, String transcription, String audioFilePath,
+            String url) {
         this.fileName = fileName;
         this.thumbnailurl = thumbnailurl;
         this.userId = userId;
@@ -41,12 +54,12 @@ public class Video {
         this.thumbnailurl = thumbnailurl;
     }
 
-    public String getUrl(){
+    public String getUrl() {
         return url;
     }
 
-    public void setUrl(String url){
-        this.url=url;
+    public void setUrl(String url) {
+        this.url = url;
     }
 
     public Long getId() {
@@ -96,5 +109,8 @@ public class Video {
     public void setAudioFilePath(String audioFilePath) {
         this.audioFilePath = audioFilePath;
     }
-}
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+}

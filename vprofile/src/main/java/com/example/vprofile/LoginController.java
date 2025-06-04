@@ -1,14 +1,13 @@
 package com.example.vprofile;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api")
@@ -50,6 +49,7 @@ public class LoginController {
                 response.put("firstName", user.getFirstName());
                 response.put("jobOption", user.getJobOption());
                 response.put("userId", user.getId());
+                response.put("email", user.getEmail());
                 response.put("profilePic", user.getProfilePic());
                 response.put("industry", user.getIndustry());
                 response.put("currentEmployer",user.getCurrentEmployer());

@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -67,11 +68,11 @@ public class VideoService {
 
     public Video saveVideo(MultipartFile file, Long userId) throws IOException, InterruptedException {
         validateUser(userId);
-
+    
         // Save the uploaded file temporarily
         Path videoFilePath = saveUploadedFile(file);
         File tempCompressedFile = new File(uploadDir, "compressed_" + file.getOriginalFilename());
-
+    
         // Compress the video file
         try {
             ffmpegService.compressVideo(videoFilePath.toFile(), tempCompressedFile);
@@ -79,37 +80,42 @@ public class VideoService {
             e.printStackTrace();
             throw e;
         }
-
+    
         // Ensure the compressed file exists
         if (!tempCompressedFile.exists() || tempCompressedFile.length() == 0) {
             throw new RuntimeException("Compressed video file was not created or is empty.");
         }
-
+    
         // Extract audio and generate transcription
-        String audioUrl = extractAudioWithTransloadit(videoFilePath);
-        String downloadedAudioPath = downloadAudio(audioUrl, file.getOriginalFilename());
+        String audioExtractedUrl = extractAudioWithTransloadit(videoFilePath);
+        String downloadedAudioPath = downloadAudio(audioExtractedUrl, file.getOriginalFilename());
         String transcription = convertAudioToText(downloadedAudioPath);
-
-        // Generate video URL for accessing the file
+    
+        // Generate URLs for accessing the video and audio files
         String videoUrl = "https://wezume.in/uploads/videos/" + tempCompressedFile.getName();
-
-        // Create and save the Video entity WITHOUT storing it as a Blob
+    
+        // Extract audio file name to build public URL
+        String audioFileName = Paths.get(downloadedAudioPath).getFileName().toString();
+        String audioUrl = "https://wezume.in/uploads/videos/audio/" + audioFileName;
+    
+        // Create and save the Video entity
         Video video = new Video();
-        video.setFileName(tempCompressedFile.getName()); // Save compressed file name as the video file name
+        video.setFileName(tempCompressedFile.getName());
         video.setUserId(userId);
-        video.setFilePath(tempCompressedFile.getAbsolutePath()); // Store only file path
+        video.setFilePath(tempCompressedFile.getAbsolutePath());
         video.setUrl(videoUrl);
+        video.setAudioFilePath(audioUrl); // ✅ audio URL set here
         video.setTranscription(transcription);
-
+    
         return videoRepository.save(video);
     }
+    
 
     private void validateUser(Long userId) {
         if (!userRepository.existsById(userId)) {
             throw new IllegalArgumentException("User with ID " + userId + " does not exist.");
         }
     }
-
     private Path saveUploadedFile(MultipartFile file) throws IOException {
         File directory = new File(uploadDir);
         if (!directory.exists()) {

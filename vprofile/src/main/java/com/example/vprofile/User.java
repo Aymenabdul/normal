@@ -3,6 +3,8 @@ package com.example.vprofile;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "user")
@@ -17,6 +19,14 @@ public class User {
 
     @Column(name = "phone_number", unique = true) // Phone number should be unique
     private String phoneNumber;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+    }
 
     @NotNull
     @Email
@@ -45,9 +55,9 @@ public class User {
 
     // Constructors
     public User(Long id, String firstName, String lastName, String email, String phoneNumber, String password,
-                String jobOption, byte[] profilePic, String currentRole, String keySkills,
-                String experience, String industry, String currentEmployer, String languagesKnown,
-                String city, Integer establishedYear, boolean enabled) {
+            String jobOption, byte[] profilePic, String currentRole, String keySkills,
+            String experience, String industry, String currentEmployer, String languagesKnown,
+            String city, Integer establishedYear, boolean enabled) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -67,7 +77,8 @@ public class User {
         this.enabled = enabled;
     }
 
-    public User() {}
+    public User() {
+    }
 
     // Getters and Setters for new fields
     public String getCity() {
@@ -207,4 +218,9 @@ public class User {
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
 }

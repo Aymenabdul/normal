@@ -22,6 +22,7 @@ import Shares from 'react-native-vector-icons/Entypo';
 import Like from 'react-native-vector-icons/Foundation';
 import Share from 'react-native-share'; // Import the share module
 import Phone from 'react-native-vector-icons/FontAwesome6';
+import Score from 'react-native-vector-icons/MaterialCommunityIcons';
 import Whatsapp from 'react-native-vector-icons/Entypo';
 import RNFS from 'react-native-fs';
 import env from './env';
@@ -41,13 +42,13 @@ const MySwipe = () => {
   const [videoId, setVideoId] = useState(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [subtitles, setSubtitles] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState(null);
   const [currentVideo, setCurrentVideo] = useState(null);
   const [selectedVideoUri, setSelectedVideoUri] = useState('');
   const [Index, setSelectedIndex] = useState(null);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
   const [page, setPage] = useState(0);
   const pageSize = 1;
+  const [score, setScore] = useState(0);
   const [isVideoLoading, setIsVideoLoading] = useState(true); // State to manage video loading
 
   const route = useRoute();
@@ -430,6 +431,20 @@ const MySwipe = () => {
         }
       };
 
+      const fetchScore = async videoId => {
+      try {
+        const response = await axios.get(
+          `https://app.wezume.in/api/totalscore/${videoId}`,
+        );
+        setScore(response.data.totalScore);
+      } catch (error) {
+        console.error('Error fetching score:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+fetchScore(videoId);
+
       fetchSubtitles();
     }
   }).current;
@@ -608,6 +623,22 @@ const MySwipe = () => {
                         <Whatsapp name={'email'} size={27} color={'#ffffff'} />
                       </TouchableOpacity>
                     </View>
+                    <View style={styles.buttonscore}>
+                      <TouchableOpacity
+                        onPress={() =>
+                          navigation.navigate('ScoringScreen', {
+                            videoId: item.id,
+                            userId: item.userId,
+                          })
+                        }>
+                        <Score
+                          name={'speedometer'}
+                          size={30}
+                          color={'#ffffff'}
+                        />
+                         <Text style={{color:'#ffffff',left:5,fontWeight:'900'}}>{score}</Text>
+                      </TouchableOpacity>
+                    </View>
                     <View style={styles.buttonphone}>
                       <TouchableOpacity onPress={() => makeCall(item)}>
                         <Phone
@@ -717,6 +748,16 @@ const styles = StyleSheet.create({
     right: '89%',
     fontSize: 24,
     fontWeight: '900',
+  },
+  buttonscore: {
+    position: 'absolute',
+    top: '54%',
+    right: 27,
+    color: '#ffffff',
+    fontSize: 30,
+    zIndex: 10,
+    elevation: 10,
+    padding: 10,
   },
   buttonheart: {
     position: 'absolute',

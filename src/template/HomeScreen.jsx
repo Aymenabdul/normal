@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef, useCallback} from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -12,15 +12,15 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import axios from 'axios';
-import {Buffer} from 'buffer';
+import { Buffer } from 'buffer';
 import Video from 'react-native-video';
 import Header from './header';
-import {useNavigation} from '@react-navigation/native';
-import {PermissionsAndroid, Platform} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { PermissionsAndroid, Platform } from 'react-native';
 import env from './env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const Myvideos = () => {
+const HomeScreen = () => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [profileImage, setProfileImage] = useState(null);
@@ -28,7 +28,8 @@ const Myvideos = () => {
   const [hasVideo, setHasVideo] = useState(null);
   const [userId, setUserId] = useState();
   const [firstName, setFirstName] = useState('');
-  const [videoId, setVideoId] = useState(null);
+  // const [videoId, setVideoId] = useState(null);
+  const [jobOption, setJobOption] = useState();
   const [visibleVideoIndex, setVisibleVideoIndex] = useState(null);
   const [loadingThumbnails, setLoadingThumbnails] = useState(true);
   const [fetching, setFetching] = useState(false); // Add fetching state
@@ -36,11 +37,25 @@ const Myvideos = () => {
     itemVisiblePercentThreshold: 50,
   });
 
-  const onViewableItemsChanged = useCallback(({viewableItems}) => {
+  const onViewableItemsChanged = useCallback(({ viewableItems }) => {
     if (viewableItems.length > 0) {
       setVisibleVideoIndex(viewableItems[0].index);
     }
   }, []);
+
+ useEffect(() => {
+  const sendHeartbeat = () => {
+    axios.post(`${env.baseURL}/api/heartbeat`, { userId })
+      .then(() => console.log('Heartbeat sent'))
+      .catch(err => console.error('Heartbeat failed', err));
+  };
+
+  sendHeartbeat(); // send one immediately on mount
+
+  const interval = setInterval(sendHeartbeat, 60 * 1000); // every 5 mins
+
+  return () => clearInterval(interval); // cleanup on unmount
+}, [userId]); // include userId as dependency
 
   useEffect(() => {
     const loadDataFromStorage = async () => {
@@ -48,10 +63,17 @@ const Myvideos = () => {
         // Retrieve values from AsyncStorage
         const apiFirstName = await AsyncStorage.getItem('firstName');
         const apiUserId = await AsyncStorage.getItem('userId');
-        const apiVideoId = await AsyncStorage.getItem('videoId');
+        // const apiVideoId = await AsyncStorage.getItem('videoId');
+        const apiJobOption = await AsyncStorage.getItem('jobOption');
         const parsedUserId = apiUserId ? parseInt(apiUserId, 10) : null;
+        console.log('Logged-in user details:', {
+          userId: parsedUserId,
+          firstName: apiFirstName,
+          jobOption: apiJobOption,
+        });
         setFirstName(apiFirstName);
-        setVideoId(apiVideoId);
+        // setVideoId(apiVideoId);
+        setJobOption(apiJobOption);
         setUserId(parsedUserId);
         fetchProfilePic(parsedUserId);
       } catch (error) {
@@ -70,7 +92,7 @@ const Myvideos = () => {
           onPress: () => null,
           style: 'cancel',
         },
-        {text: 'Yes', onPress: () => navigation.goBack()},
+        { text: 'Yes', onPress: () => navigation.goBack() },
       ]);
       return true;
     };
@@ -78,26 +100,42 @@ const Myvideos = () => {
     return () => {
       BackHandler.removeEventListener('hardwareBackPress', backAction);
     };
-  }, []);
+  }, [navigation]);
 
   useEffect(() => {
     const fetchVideos = async () => {
       if (fetching) return; // Prevent multiple fetch calls
       setFetching(true);
-      console.log('Fetching videos...'); // Add this line to verify when the function is called
+      console.log('Fetching videos or loading from cache...');
+
       try {
         setLoading(true);
+
+        // Check cache first
+        const cachedVideos = await AsyncStorage.getItem('cachedVideos');
+        if (cachedVideos) {
+          console.log('Loading videos from cache');
+          const parsedVideos = JSON.parse(cachedVideos);
+          setVideoUrl(parsedVideos);
+          setHasVideo(parsedVideos.length > 0);
+          return;
+        }
+
+        // If no cache found, call API
+        console.log('No cache found, fetching from API...');
         const response = await fetch(`${env.baseURL}/api/videos/videos`);
         if (!response.ok) {
           throw new Error(`Failed to fetch videos: ${response.statusText}`);
         }
         const videoData = await response.json();
+
         if (!Array.isArray(videoData) || videoData.length === 0) {
           console.warn('No videos available');
           setVideoUrl([]);
           setHasVideo(false);
           return;
         }
+
         const videoURIs = [];
         for (let index = 0; index < videoData.length; index++) {
           const video = videoData[index];
@@ -109,26 +147,33 @@ const Myvideos = () => {
           videoURIs.push({
             Id: video.id,
             uri: video.videoUrl,
-            thumbnail: video.thumbnail, // Directly using the thumbnail from the API response
+            thumbnail: video.thumbnail,
           });
-          setVideoUrl([...videoURIs]); // Update state with the new videos as they are ready
+          setVideoUrl([...videoURIs]); // Update state progressively
           if (index === 0) {
-            setLoadingThumbnails(false); // Stop showing the loading indicator as soon as the first video is ready
+            setLoadingThumbnails(false);
           }
         }
-        setVideoUrl(videoURIs); // Update state with the new videos once
+
+        setVideoUrl(videoURIs); // Final full update
         setHasVideo(true);
+
+        // Save to cache
+        await AsyncStorage.setItem('cachedVideos', JSON.stringify(videoURIs));
+        console.log('Videos cached successfully');
       } catch (error) {
         console.error('Error fetching videos:', error);
         setHasVideo(false);
       } finally {
         setLoading(false);
         setLoadingThumbnails(false);
-        setFetching(false); // Reset fetching state
+        setFetching(false);
       }
     };
+
     fetchVideos();
-  }, [userId]); // Remove videoId from dependencies to avoid multiple callsr
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]); // you don't need to add 'fetching' into dependencies
 
   const fetchProfilePic = async userId => {
     try {
@@ -153,14 +198,6 @@ const Myvideos = () => {
       setLoading(false);
     }
   };
-
-  const navigateToMySwipe = (videoList, selectedIndex) => {
-    navigation.navigate('MySwipe', {
-      videoList, // Pass the entire video list
-      index: selectedIndex, // Pass the selected index
-    });
-  };
-
   return (
     <View style={styles.container}>
       <Header profile={profileImage} userName={firstName} />
@@ -172,21 +209,24 @@ const Myvideos = () => {
         ) : (
           <FlatList
             data={videourl} // Exclude video with Id 32
-            renderItem={({item, index}) => (
+            renderItem={({ item, index }) => (
               <TouchableOpacity
                 onPress={() => {
                   console.log('VideoId', item.Id, 'Index', index);
-                  navigateToMySwipe(videourl, index);
+                  navigation.navigate('HomeSwipe', {
+                    videoId: item.Id,
+                    index: index,
+                  });
                 }}
                 style={[styles.videoItem]}>
                 {item.thumbnail ? ( // Using the thumbnail property here
                   <ImageBackground
-                    source={{uri: item.thumbnail}}
+                    source={{ uri: item.thumbnail }}
                     style={styles.videoPlayer}
                     resizeMode="contain">
                     {visibleVideoIndex === index && (
                       <Video
-                        source={{uri: item.thumbnail}}
+                        source={{ uri: item.thumbnail }}
                         paused={false}
                         style={styles.videoPlayer}
                         resizeMode="contain"
@@ -251,4 +291,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Myvideos;
+export default HomeScreen;

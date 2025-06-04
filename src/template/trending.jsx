@@ -78,44 +78,77 @@ const MyVideos = () => {
     return () => {
       BackHandler.removeEventListener('hardwareBackPress', backAction);
     };
-  }, []);
+  }, [navigation]);
 
   useEffect(() => {
-    const fetchVideos = async () => {
-      if (fetching) return; // Prevent multiple fetch calls
+    const fetchTrendingVideos = async () => {
+      if (fetching) return;
       setFetching(true);
-      console.log('Fetching videos...'); // Add this line to verify when the function is called
+      console.log('Fetching trending videos or loading from cache...');
+
       try {
         setLoading(true);
+
+        // Check cache first
+        const cachedTrending = await AsyncStorage.getItem(
+          'cachedTrendingVideos',
+        );
+        if (cachedTrending) {
+          console.log('Loading trending videos from cache');
+          const parsedTrending = JSON.parse(cachedTrending);
+          setVideoUrl(parsedTrending);
+          setHasVideo(parsedTrending.length > 0);
+          return;
+        }
+
+        // No cache, call trending API
+        console.log('No cache found, fetching trending from API...');
         const response = await fetch(`${env.baseURL}/api/videos/trending`);
         if (!response.ok) {
-          throw new Error(`Failed to fetch videos: ${response.statusText}`);
+          throw new Error(
+            `Failed to fetch trending videos: ${response.statusText}`,
+          );
         }
+
         const videoData = await response.json();
+
         if (!Array.isArray(videoData) || videoData.length === 0) {
-          console.warn('No videos available');
+          console.warn('No trending videos available');
           setVideoUrl([]);
           setHasVideo(false);
           return;
         }
-        const videoURIs = videoData.map(video => ({
+
+        const trendingVideos = videoData.map(video => ({
           Id: video.id,
           uri: video.videoUrl,
-          thumbnail: video.thumbnail, // Use pre-generated thumbnail URL from API
+          thumbnail: video.thumbnail,
         }));
-        setVideoUrl(videoURIs);
+console.log('====================================');
+console.log('Trending Videos:', trendingVideos);
+console.log('====================================');
+        setVideoUrl(trendingVideos);
         setHasVideo(true);
+
+        // Cache trending videos
+        await AsyncStorage.setItem(
+          'cachedTrendingVideos',
+          JSON.stringify(trendingVideos),
+        );
+        console.log('Trending videos cached successfully');
       } catch (error) {
-        console.error('Error fetching videos:', error);
+        console.error('Error fetching trending videos:', error);
         setHasVideo(false);
       } finally {
         setLoading(false);
-        setFetching(false); // Reset fetching state
-        setLoadingThumbnails(false); // Update loadingThumbnails state
+        setLoadingThumbnails(false);
+        setFetching(false);
       }
     };
-    fetchVideos();
-  }, [userId]); // Remove videoId from dependencies to avoid multiple callsr
+
+    fetchTrendingVideos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   const fetchProfilePic = async userId => {
     try {

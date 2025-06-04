@@ -102,6 +102,7 @@ public class VideoController {
         response.put("videoUrl", video.getUrl());
         response.put("userId", video.getUserId());
         response.put("tumbnail",video.getThumbnailUrl());
+        response.put("audiourl", video.getAudioFilePath());
 
         return ResponseEntity.ok(response);
     }
@@ -178,6 +179,8 @@ public class VideoController {
             User user = userRepository.findById(videoEntity.getUserId()).orElse(null);
             if (user != null) {
                 videoData.put("firstname", user.getFirstName());
+                videoData.put("email", user.getEmail());
+                videoData.put("phonenumber", user.getPhoneNumber());
                 videoData.put("profilepic", user.getProfilePic() != null ? user.getProfilePic() : defaultProfilePic);
             } else {
                 videoData.put("firstname", "User");
@@ -466,26 +469,46 @@ public class VideoController {
         return ResponseEntity.ok(videoResponses);
     }
 
-    @GetMapping("/trending")
-    public ResponseEntity<List<Map<String, Object>>> getTrendingVideos() {
-        List<Video> trendingVideos = videoService.getTrendingVideos();
+   @GetMapping("/trending")
+public ResponseEntity<List<Map<String, Object>>> getTrendingVideos() {
+    List<Video> trendingVideos = videoService.getTrendingVideos();
 
-        if (trendingVideos.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-        }
-
-        List<Map<String, Object>> videoResponses = new ArrayList<>();
-        for (Video video : trendingVideos) {
-            Map<String, Object> videoDataMap = new HashMap<>();
-            videoDataMap.put("id", video.getId());
-            videoDataMap.put("userId", video.getUserId());
-            videoDataMap.put("videoUrl", video.getUrl());
-            videoDataMap.put("thumbnail", video.getThumbnailUrl());
-            videoResponses.add(videoDataMap);
-        }
-
-        return ResponseEntity.ok(videoResponses);
+    if (trendingVideos.isEmpty()) {
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
+
+    List<Map<String, Object>> videoResponses = new ArrayList<>();
+
+    for (Video video : trendingVideos) {
+        Map<String, Object> videoDataMap = new HashMap<>();
+        videoDataMap.put("id", video.getId());
+        videoDataMap.put("userId", video.getUserId());
+        videoDataMap.put("videoUrl", video.getUrl());
+        videoDataMap.put("thumbnail", video.getThumbnailUrl());
+
+        // Fetch user details using userId
+        Optional<User> userOptional = userRepository.findById(video.getUserId());
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            videoDataMap.put("firstName", user.getFirstName());
+            videoDataMap.put("email", user.getEmail());
+            videoDataMap.put("phoneNumber", user.getPhoneNumber());
+            videoDataMap.put("profilePic",
+                user.getProfilePic() != null ? user.getProfilePic() : "https://wezume.in/uploads/videos/defaultpic.png");
+        } else {
+            videoDataMap.put("firstName", "User");
+            videoDataMap.put("email", "");
+            videoDataMap.put("phoneNumber", "");
+            videoDataMap.put("profilePic", "https://wezume.in/uploads/videos/defaultpic.png");
+        }
+
+        videoResponses.add(videoDataMap);
+    }
+
+    return ResponseEntity.ok(videoResponses);
+}
+
 
     @PostMapping("/check-profane")
 public ResponseEntity<?> checkForProfanity(@RequestBody Map<String, String> request) {
@@ -606,7 +629,7 @@ private String extractAndSaveThumbnail(File tempVideo, String videoFileName) {
     @GetMapping("/paging")
     public ResponseEntity<List<Map<String, Object>>> getVideos(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "2") int size) {
+            @RequestParam(defaultValue = "10") int size) {
 
         Page<Video> videoPage = videoService.getVideos(page, size);
 
@@ -723,6 +746,11 @@ private String extractAndSaveThumbnail(File tempVideo, String videoFileName) {
         });
 
         return ResponseEntity.ok(response);
+    }
+
+     @GetMapping("/video-count")
+    public long getTotalUpload() {
+        return videoRepository.countAllUpload();
     }
 
 };

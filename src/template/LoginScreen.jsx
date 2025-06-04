@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   TextInput,
@@ -14,8 +14,8 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import FastImage from 'react-native-fast-image';
 import axios from 'axios'; // Import Axios
-import {WebView} from 'react-native-webview'; // Import WebView for LinkedIn OAuth
-import {useNavigation} from '@react-navigation/native';
+import { WebView } from 'react-native-webview'; // Import WebView for LinkedIn OAuth
+import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import env from './env';
 
@@ -35,51 +35,47 @@ const LoginScreen = () => {
       return;
     }
 
-    setLoading(false);
+    setLoading(true); // ✅ Corrected this
+
     try {
       const response = await axios.post(
         `${env.baseURL}/api/login`,
-        {email, password},
+        { email, password },
         {
           headers: {
             'Content-Type': 'application/json',
           },
-        },
+        }
       );
 
-      const {firstName, jobOption, userId, industry, videos} = response.data;
-      if (Array.isArray(videos) && videos.length > 0 && videos[0]) {
-        const videoId = videos[0].videoId || null; // Use null if videoId is not available
-      } else {
-        // If no videos are found, videoId is null
-        const videoId = null;
-      }
+      const { firstName, jobOption, userId, industry, videos } = response.data;
+      const videoId =
+        Array.isArray(videos) && videos.length > 0 && videos[0]?.videoId
+          ? videos[0].videoId
+          : null;
+
       if (firstName && jobOption) {
-        // Check jobOption to navigate to the appropriate screen
+        // Employee-like roles
         if (
           jobOption === 'Employee' ||
           jobOption === 'Entrepreneur' ||
           jobOption === 'Freelancer'
         ) {
-          // Use videoId (which might be null) for storage
-          await saveStorage(
-            userId,
-            firstName,
-            jobOption,
-            industry,
-            videos[0] ? videos[0].videoId : null,
-          );
+          await saveStorage(userId, firstName, email, jobOption, industry, videoId);
           navigation.navigate('home1');
-        } else if (jobOption === 'Employer' || jobOption === 'Investor') {
-          // Save the user data without videoId if not available
-          await saveStorage(userId, firstName, jobOption, industry);
+        }
+        // Employer-like roles
+        else if (jobOption === 'Employer' || jobOption === 'Investor') {
+          await saveStorage(userId, firstName, email, jobOption, industry, videoId);
           navigation.navigate('HomeScreen', {
             firstName,
+            email,
             jobOption,
             userId,
             industry,
           });
         }
+
         setEmail('');
         setPassword('');
       } else {
@@ -88,7 +84,7 @@ const LoginScreen = () => {
     } catch (error) {
       console.error(
         'Login failed:',
-        error.response ? error.response.data : error.message,
+        error.response ? error.response.data : error.message
       );
       Alert.alert('Login Failed', 'Invalid email or password!');
     } finally {
@@ -99,24 +95,28 @@ const LoginScreen = () => {
   const saveStorage = async (
     userId,
     firstName,
+    email,
     jobOption,
     industry,
-    videoId,
+    videoId
   ) => {
     try {
-      await AsyncStorage.setItem('userId', userId.toString()); // Store as string
+      await AsyncStorage.setItem('userId', userId.toString());
       await AsyncStorage.setItem('firstName', firstName);
+      await AsyncStorage.setItem('email', email);
       await AsyncStorage.setItem('jobOption', jobOption);
-      await AsyncStorage.setItem('industry', industry);
-      if (videoId !== null && videoId !== "null") {
-        await AsyncStorage.setItem('videoId', videoId.toString()); // Store as string
+      await AsyncStorage.setItem('industry', industry || '');
+
+      if (videoId !== null && videoId !== 'null') {
+        await AsyncStorage.setItem('videoId', videoId.toString());
       } else {
-        await AsyncStorage.removeItem('videoId'); // Remove if null
+        await AsyncStorage.removeItem('videoId');
       }
     } catch (error) {
       console.error('Error saving data to AsyncStorage:', error);
     }
   };
+
 
   // Function to initiate LinkedIn login
   const handleLinkedInLogin = () => {
@@ -155,16 +155,16 @@ const LoginScreen = () => {
           const response = await axios.post(`${env.baseURL}/auth/linkedin`, {
             code,
           });
-          const {given_name, email, picture} = response.data; // 'picture' contains the URL
+          const { given_name, email, picture } = response.data; // 'picture' contains the URL
 
           if (given_name && email && picture) {
             // Check if email is already signed up
             const userResponse = await axios.get(`${env.baseURL}/users/check`, {
-              params: {email},
+              params: { email },
             });
 
             if (userResponse.data.exists) {
-              const {userId, jobOption, firstName, phoneNumber} =
+              const { userId, jobOption, firstName, phoneNumber } =
                 userResponse.data;
               await AsyncStorage.setItem('userId', JSON.stringify(userId));
               await AsyncStorage.setItem('firstName', firstName);
@@ -203,7 +203,7 @@ const LoginScreen = () => {
               }
             } else {
               // User doesn't exist, show role selection
-              setUserData({given_name, email, picture});
+              setUserData({ given_name, email, picture });
               setShowRoleSelection(true);
             }
           } else {
@@ -232,7 +232,7 @@ const LoginScreen = () => {
       return;
     }
 
-    const {email, given_name} = userData;
+    const { email, given_name } = userData;
     const isPublicDomain = email => {
       const publicDomains = [
         'gmail.com',
@@ -246,11 +246,11 @@ const LoginScreen = () => {
 
     try {
       const response = await axios.get(`${env.baseURL}/users/check`, {
-        params: {email},
+        params: { email },
       });
       if (response.status === 200 && response.data.exists) {
 
-        const {jobOption, userId, firstName} = response.data;
+        const { jobOption, userId, firstName } = response.data;
 
         // Store data in AsyncStorage
         await AsyncStorage.setItem('userId', JSON.stringify(userId));
@@ -263,7 +263,7 @@ const LoginScreen = () => {
           Alert.alert(
             'Restricted Email',
             'Public email domains are not allowed for recruiters.',
-            [{text: 'OK', onPress: () => navigation.navigate('LoginScreen')}],
+            [{ text: 'OK', onPress: () => navigation.navigate('LoginScreen') }],
           );
           return;
         }
@@ -276,7 +276,7 @@ const LoginScreen = () => {
             jobOption,
             userId,
           });
-        } else if (role === 'Employee' || role === 'Entrepreneur') {
+        } else if (role === 'Employee' || role === 'Entrepreneur' || role === 'Freelancer') {
           navigation.navigate('Edit', {
             firstName: given_name,
             email,
@@ -296,7 +296,7 @@ const LoginScreen = () => {
           Alert.alert(
             'Restricted Email',
             'Public email domains are not allowed for recruiters.',
-            [{text: 'OK', onPress: () => navigation.navigate('LoginScreen')}],
+            [{ text: 'OK', onPress: () => navigation.navigate('LoginScreen') }],
           );
           return;
         }
@@ -428,7 +428,7 @@ const LoginScreen = () => {
         </LinearGradient>
         <TouchableOpacity onPress={() => navigation.navigate('SignupScreen')}>
           <Text style={styles.createAccount}>
-            Don't Have An Account ? <Text style={{color: 'blue'}}> SignUp</Text>
+            Don't Have An Account ? <Text style={{ color: 'blue' }}> SignUp</Text>
           </Text>
         </TouchableOpacity>
 
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{translateX: -20}, {translateY: -20}],
+    transform: [{ translateX: -20 }, { translateY: -20 }],
   },
   img2: {
     width: 200,

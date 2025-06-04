@@ -10,29 +10,32 @@ import {
   Image,
   BackHandler,
   Dimensions,
-  ActivityIndicator, // Import ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import axios from 'axios';
 import {Buffer} from 'buffer';
 import Video from 'react-native-video';
 import {useRoute} from '@react-navigation/native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation,useIsFocused} from '@react-navigation/native';
 import Ant from 'react-native-vector-icons/AntDesign';
 import Shares from 'react-native-vector-icons/Entypo';
 import Like from 'react-native-vector-icons/Foundation';
-import Share from 'react-native-share'; // Import the share module
+import Share from 'react-native-share'; 
+import Score from 'react-native-vector-icons/MaterialCommunityIcons';
 import Phone from 'react-native-vector-icons/FontAwesome6';
 import Whatsapp from 'react-native-vector-icons/Entypo';
 import RNFS from 'react-native-fs';
 import env from './env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const windowHeight = Dimensions.get('screen').height;
-const MySwipe = () => {
+const HomeSwipe = () => {
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
   const [loading, setLoading] = useState(true);
   const [profileImage, setProfileImage] = useState(null);
   const [videourl, setVideoUrl] = useState([]); // Array of video objects
   const [hasVideo, setHasVideo] = useState(null);
+  const [paused, setPaused] = useState(false);
   const [userId, setUserId] = useState();
   const [firstName, setFirstName] = useState('');
   const [likeCount, setLikeCount] = useState(0);
@@ -41,18 +44,18 @@ const MySwipe = () => {
   const [videoId, setVideoId] = useState(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [subtitles, setSubtitles] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState(null);
   const [currentVideo, setCurrentVideo] = useState(null);
   const [selectedVideoUri, setSelectedVideoUri] = useState('');
   const [Index, setSelectedIndex] = useState(null);
+  const [score,setScore] = useState(0);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
-  const [page, setPage] = useState(0);
-  const pageSize = 1;
+  const videoCacheRef = useRef(new Set());
   const [isVideoLoading, setIsVideoLoading] = useState(true); // State to manage video loading
 
   const route = useRoute();
   const selectedVideoId = route?.params?.videoId ?? '';
   const selectedIndex = route?.params?.index ?? '';
+  
 
   useEffect(() => {
     if (selectedVideoId) {
@@ -120,12 +123,10 @@ const MySwipe = () => {
     };
   }, [navigation]);
   useEffect(() => {
-    const fetchVideos = async (page = 0, size = 10) => {
+    const fetchVideos = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
-          `${env.baseURL}/api/videos/paging?page=${page}&size=${size}`,
-        );
+        const response = await fetch(`${env.baseURL}/api/videos/videos`);
 
         if (!response.ok) {
           throw new Error(`Failed to fetch videos: ${response.statusText}`);
@@ -152,23 +153,23 @@ const MySwipe = () => {
           thumbnail: video.thumbnail || null, // Ensure thumbnail is set or null
         }));
 
-        setVideoUrl(prevVideos => {
-          const filteredVideos = newVideos.filter(
-            video => video.uri !== selectedVideoUri, // Prevents duplication
-          );
-
-          const uniqueVideos = [...prevVideos, ...filteredVideos].filter(
-            (video, index, self) =>
-              index === self.findIndex(v => v.uri === video.uri),
-          );
-
-          return uniqueVideos.map((video, idx) => ({
-            ...video,
-            key: `video-${video.id}-${idx}`,
-          }));
+        // Filter out cached videos
+        const uncachedVideos = newVideos.filter(video => {
+          if (videoCacheRef.current.has(video.uri)) return false;
+          videoCacheRef.current.add(video.uri); // Add to cache
+          return true;
         });
 
-        setPage(prevPage => prevPage + 1);
+        if (uncachedVideos.length > 0) {
+          setVideoUrl(prevVideos => [
+            ...prevVideos,
+            ...uncachedVideos.map((video, idx) => ({
+              ...video,
+              key: `video-${video.id}-${idx}`,
+            })),
+          ]);
+        }
+
         setHasVideo(true);
       } catch (error) {
         console.error('Error fetching videos:', error);
@@ -178,8 +179,8 @@ const MySwipe = () => {
       }
     };
 
-    fetchVideos(page, pageSize);
-  }, [userId, page, selectedVideoUri]);
+    fetchVideos();
+  }, []);
 
   useEffect(() => {
     const fetchLikeCount = async () => {
@@ -330,11 +331,11 @@ const MySwipe = () => {
           'Failed to download the thumbnail. Status code:',
           downloadResult.statusCode,
         );
-        Alert.alert('Error', 'Unable to download the thumbnail for sharing.');
+        console.error('Error', 'Unable to download the thumbnail for sharing.');
       }
     } catch (error) {
       console.error('Error sharing video:', error);
-      Alert.alert(
+      console.error(
         'Error',
         'An error occurred while preparing the share option.',
       );
@@ -365,7 +366,19 @@ const MySwipe = () => {
           console.error('Error fetching like count:', error);
         }
       };
-
+    const fetchScore = async videoId => {
+      try {
+        const response = await axios.get(
+          `https://app.wezume.in/api/totalscore/${videoId}`,
+        );
+        setScore(response.data.totalScore);
+      } catch (error) {
+        console.error('Error fetching score:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+fetchScore(videoId); // Fetch score for the focused video
       fetchLikeCount(); // Fetch like count for the focused video
 
       // Pause all videos except the focused one
@@ -483,6 +496,14 @@ const MySwipe = () => {
     }
   }, [selectedIndex, videourl]); // Trigger when selectedIndex or videourl changes
 
+  useEffect(() => {
+    if (!isFocused) {
+      setPaused(true);
+    } else {
+      setPaused(false);
+    }
+  }, [isFocused]);
+
   return (
     <View style={styles.container}>
       <View style={styles.modalContainer}>
@@ -503,9 +524,6 @@ const MySwipe = () => {
             offset: windowHeight * index,
             index,
           })}
-          initialScrollIndex={
-            parseInt(selectedIndex, 10) >= 0 ? parseInt(selectedIndex, 10) : 0
-          } // Always scroll to the selected index
           initialNumToRender={1} // Load one video at a time
           maxToRenderPerBatch={1} // Render one video at a time
           windowSize={1} // Render only one video at a time
@@ -537,7 +555,7 @@ const MySwipe = () => {
                   controls={true}
                   automaticallyWaitsToMinimizeStalling={false}
                   resizeMode="cover"
-                  paused={currentVideo?.id !== item.id} // Autoplay only the focused video
+                  paused={!isFocused || currentVideo?.id !== item.id} // Autoplay only the focused video
                   onLoadStart={() => setIsVideoLoading(true)} // Show loader when video starts loading
                   onLoad={() => setIsVideoLoading(false)} // Hide loader when video is loaded
                   onError={error =>
@@ -606,6 +624,13 @@ const MySwipe = () => {
                     <View style={styles.buttonmsg}>
                       <TouchableOpacity onPress={() => sendEmail(item)}>
                         <Whatsapp name={'email'} size={27} color={'#ffffff'} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.buttonscore}>
+                      <TouchableOpacity
+                        onPress={() => navigation.navigate('ScoringScreen', { videoId: item.id , userId: item.userId})}>
+                        <Score name={'speedometer'} size={30} color={'#ffffff'} />
+                        <Text style={{color:'#ffffff',left:5,fontWeight:'900'}}>{score}</Text>
                       </TouchableOpacity>
                     </View>
                     <View style={styles.buttonphone}>
@@ -738,6 +763,16 @@ const styles = StyleSheet.create({
     elevation: 10,
     padding: 10,
   },
+  buttonscore: {
+    position: 'absolute',
+    top: '54%',
+    right: 27,
+    color: '#ffffff',
+    fontSize: 30,
+    zIndex: 10,
+    elevation: 10,
+    padding: 10,
+  },
   buttonphone: {
     position: 'absolute',
     top: '73%',
@@ -805,4 +840,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MySwipe;
+export default HomeSwipe;

@@ -2,6 +2,7 @@ import React, {useEffect, useRef} from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {Linking, PermissionsAndroid, Platform} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import notifee from '@notifee/react-native';
 
 // Import Screens
@@ -26,6 +27,8 @@ import HomeSwipe from './src/template/homeSwipe';
 import LikeSwipe from './src/template/likeSwipe';
 import TrendSwipe from './src/template/trendSwipe';
 import MySwipe from './src/template/mySwipe';
+import ScoringScreen from './src/template/scoring';
+import AnalyticScreen from './src/template/Analytics';  
 import FilterSwipe from './src/template/filterSwipe';
 const Stack = createNativeStackNavigator();
 
@@ -136,6 +139,7 @@ const App = () => {
     }
 };
 
+
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={{headerShown: false}}>
@@ -161,6 +165,8 @@ const App = () => {
         <Stack.Screen name="FilterSwipe" component={FilterSwipe} />
         <Stack.Screen name="TrendSwipe" component={TrendSwipe} />
         <Stack.Screen name="LikeSwipe" component={LikeSwipe} />
+        <Stack.Screen name="ScoringScreen" component={ScoringScreen} />
+         <Stack.Screen name="AnalyticScreen" component={AnalyticScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

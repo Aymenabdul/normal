@@ -176,4 +176,19 @@ public ResponseEntity<String> handleDeepLink(@RequestParam String target) {
 
     return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(htmlResponse);
 }
+
+@GetMapping("/signup-count")
+    public long getTotalUsers() {
+        return userRepository.countAllUsers();
+    }
+
+    @GetMapping("/recruiters-count")
+public long getRecruitersCount() {
+    return userRepository.countRecruiters(); // from above
+}
+@GetMapping("/recruiters")
+public List<User> getRecruiters() {
+    return userRepository.findByJobOption("Employer");
+}
+
 }

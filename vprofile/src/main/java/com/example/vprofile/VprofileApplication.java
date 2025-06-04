@@ -9,5 +9,4 @@ public class VprofileApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(VprofileApplication.class, args);
 	}
-
 }
