@@ -2,8 +2,8 @@ import React, {useEffect, useRef} from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {Linking, PermissionsAndroid, Platform} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import notifee from '@notifee/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import Screens
 import Initial from './src/template/initialScreen';
@@ -26,15 +26,28 @@ import VideoScreen from './src/template/VideoScreen';
 import HomeSwipe from './src/template/homeSwipe';
 import LikeSwipe from './src/template/likeSwipe';
 import TrendSwipe from './src/template/trendSwipe';
-import MySwipe from './src/template/mySwipe';
-import ScoringScreen from './src/template/scoring';
-import AnalyticScreen from './src/template/Analytics';  
+import MySwipe from './src/template/mySwipe.jsx';
+import AnalyticScreen from './src/template/Analytics';
 import FilterSwipe from './src/template/filterSwipe';
+import ScoringScreen from './src/template/scoring';
+import AppUpdateChecker from './src/template/AppUpdateChecker';
+import PlacemenntSignup from './src/template/placementSignup.jsx'; 
+import RoleSelection from './src/template/roleSelection'; 
 const Stack = createNativeStackNavigator();
 
 const App = () => {
   const navigationRef = useRef(null); // ✅ Correct way to use navigation reference
   useEffect(() => {
+
+//     const clearAsyncStorage = async () => {
+//     try {
+//         await AsyncStorage.clear();
+//         console.log("All data cleared from AsyncStorage");
+//     } catch (error) {
+//         console.error("Error clearing AsyncStorage", error);
+//     }
+// };
+
     /** ✅ Create notification channel */
     const createNotificationChannel = async () => {
       try {
@@ -81,7 +94,7 @@ const App = () => {
         console.error('Failed to request notification permissions:', error);
       }
     };
-
+// clearAsyncStorage(); // Clear AsyncStorage for testing purposes
     requestNotificationPermission();
     createNotificationChannel();
 
@@ -139,10 +152,10 @@ const App = () => {
     }
 };
 
-
   return (
+    <>
     <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator screenOptions={{headerShown: false}}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Initial" component={Initial} />
         <Stack.Screen name="OnboardingScreen" component={OnboardingScreen} />
         <Stack.Screen name="LoginScreen" component={LoginScreen} />
@@ -166,9 +179,13 @@ const App = () => {
         <Stack.Screen name="TrendSwipe" component={TrendSwipe} />
         <Stack.Screen name="LikeSwipe" component={LikeSwipe} />
         <Stack.Screen name="ScoringScreen" component={ScoringScreen} />
-         <Stack.Screen name="AnalyticScreen" component={AnalyticScreen} />
+        <Stack.Screen name="AnalyticScreen" component={AnalyticScreen} />
+        <Stack.Screen name="PlacemenntSignup" component={PlacemenntSignup} />
+        <Stack.Screen name="RoleSelection" component={RoleSelection} />
       </Stack.Navigator>
     </NavigationContainer>
+    <AppUpdateChecker />
+    </>
   );
 };
 

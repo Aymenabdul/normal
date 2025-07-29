@@ -17,12 +17,7 @@ import Header from './header';
 import axios from 'axios';
 import {Buffer} from 'buffer';
 import Video from 'react-native-video';
-import Delete from 'react-native-vector-icons/MaterialCommunityIcons';
-import Shares from 'react-native-vector-icons/Ionicons';
 import Share from 'react-native-share';
-import Like from 'react-native-vector-icons/Foundation';
-import Phone from 'react-native-vector-icons/FontAwesome6';
-import Whatsapp from 'react-native-vector-icons/FontAwesome';
 import notifee from '@notifee/react-native';
 import env from './env';
 
@@ -270,25 +265,6 @@ const [ userId, setUserId ] = useState();
     fetchPhoneNumber(userId);
   };
 
-  // Function to send a WhatsApp message
-  const sendWhatsappMessage = () => {
-    if (phoneNumber) {
-      const message = `Hello, ${firstName} it's nice to connect with you.`;
-      const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(
-        message,
-      )}`;
-      Linking.openURL(url).catch(err => {
-        console.error('Error sending WhatsApp message:', err);
-        Alert.alert(
-          'Error',
-          'Failed to send message. Make sure WhatsApp is installed and the phone number is correct.',
-        );
-      });
-    } else {
-    }
-    fetchPhoneNumber(userId);
-  };
-
   const fetchLikeCount = videoId => {
     axios
       .get(`${env.baseURL}/api/videos/${videoId}/like-count`)
@@ -320,69 +296,6 @@ const [ userId, setUserId ] = useState();
       fetchLikeCount(videoId);  // Fetch like count for the specific video
     }
   }, [userId,videoId]);
-
-  const handleLike = async () => {
-    const newLikedState = !isLiked[videoId]; // Toggle the like status
-    setIsLiked(prevState => ({
-      ...prevState,
-      [videoId]: newLikedState,
-    }));
-  
-    try {
-      if (newLikedState) {
-        // If liked, send like request
-        await axios.post(
-          `${env.baseURL}/api/videos/${videoId}/like`,
-          null,
-          {params: {userId}},
-        );
-        setLikeCount(prevCount => prevCount + 1); // Increment like count
-  
-        // Trigger notification for video owner (after the like request is successful)
-        await triggerOwnerNotification();
-      }
-    } catch (error) {
-      console.error('Error toggling like:', error);
-    }
-  };
-
-  // Function to trigger notification for the video owner
-const triggerOwnerNotification = async () => {
-  try {
-    await notifee.displayNotification({
-      title: 'wezume',
-      body: `Your video has been liked by ${firstName}.`,
-      android: {
-        channelId: 'owner-channel',  // Assuming 'owner-channel' was created previously
-        smallIcon: 'ic_launcher',
-        importance: 4,  // HIGH importance for visibility
-        vibrate: true,
-      },
-    });
-  } catch (error) {
-    console.log('Error triggering notification for owner:', error);
-  }
-};
-  const handleDislike = async () => {
-    const newLikedState = !isLiked[videoId];
-    setIsLiked(prevState => ({
-      ...prevState,
-      [videoId]: newLikedState,
-    }));
-
-    try {
-      if (!newLikedState) {
-        await axios.post(
-          `${env.baseURL}/api/videos/${videoId}/dislike`,
-          null,
-          {params: {userId}},
-        );
-        setLikeCount(prevCount => prevCount - 1);
-      }
-    } catch (error) {
-      console.error('Error toggling dislike:', error);
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -627,16 +540,6 @@ const styles = StyleSheet.create({
     marginLeft: '20%',
     color: '#ffffff',
   },
-  subtitle: {
-    position: 'absolute',
-    bottom: 50,
-    left: '10%',
-    right: '10%',
-    color: 'white',
-    fontSize: 18,
-    padding: 5,
-    textAlign: 'center',
-  },
   buttoncls: {
     color: '#ffffff',
     position: 'absolute',
@@ -676,6 +579,42 @@ const styles = StyleSheet.create({
     padding: 28,
     bottom: 155,
     fontWeight: '900',
+  },
+  videoContainer: {
+    borderColor: '#ffffff',
+    borderWidth: 1,
+    borderRadius: 10,
+    overflow: 'hidden',
+    elevation: 10, // Android shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    backgroundColor: '#000',
+    width: '85%',
+    height: '80%',
+    marginLeft: '6%',
+    position: 'relative',
+  },
+
+  videoPlayer: {
+    width: '100%',
+    height: '100%',
+  },
+
+  subtitle: {
+    position: 'absolute',
+    bottom:'13%',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    color: 'white',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    fontSize: 16,
+    zIndex: 999,
   },
 });
 

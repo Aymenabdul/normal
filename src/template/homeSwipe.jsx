@@ -10,17 +10,18 @@ import {
   Image,
   BackHandler,
   Dimensions,
-  ActivityIndicator,
+  ActivityIndicator, // Import ActivityIndicator
 } from 'react-native';
 import axios from 'axios';
 import {Buffer} from 'buffer';
 import Video from 'react-native-video';
+import { useIsFocused } from '@react-navigation/native';
 import {useRoute} from '@react-navigation/native';
-import {useNavigation,useIsFocused} from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 import Ant from 'react-native-vector-icons/AntDesign';
 import Shares from 'react-native-vector-icons/Entypo';
 import Like from 'react-native-vector-icons/Foundation';
-import Share from 'react-native-share'; 
+import Share from 'react-native-share'; // Import the share module
 import Score from 'react-native-vector-icons/MaterialCommunityIcons';
 import Phone from 'react-native-vector-icons/FontAwesome6';
 import Whatsapp from 'react-native-vector-icons/Entypo';
@@ -29,34 +30,29 @@ import env from './env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const windowHeight = Dimensions.get('screen').height;
 const HomeSwipe = () => {
+   const route = useRoute();
+  const selectedVideoId = route?.params?.videoId ?? '';
+  const selectedIndex = route?.params?.index ?? '';
+  const allvideos = route?.params?.allvideos ?? [];
   const navigation = useNavigation();
-  const isFocused = useIsFocused();
   const [loading, setLoading] = useState(true);
   const [profileImage, setProfileImage] = useState(null);
-  const [videourl, setVideoUrl] = useState([]); // Array of video objects
-  const [hasVideo, setHasVideo] = useState(null);
-  const [paused, setPaused] = useState(false);
+  const [videourl, setVideoUrl] = useState(allvideos || []);
   const [userId, setUserId] = useState();
   const [firstName, setFirstName] = useState('');
   const [likeCount, setLikeCount] = useState(0);
   const [isLiked, setIsLiked] = useState({});
-  const [jobOption, setJobOption] = useState('');
+  const isFocused = useIsFocused();
   const [videoId, setVideoId] = useState(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [subtitles, setSubtitles] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
   const [currentVideo, setCurrentVideo] = useState(null);
   const [selectedVideoUri, setSelectedVideoUri] = useState('');
   const [Index, setSelectedIndex] = useState(null);
-  const [score,setScore] = useState(0);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
-  const videoCacheRef = useRef(new Set());
+  const [totalScore,setTotalScore] = useState(0);
   const [isVideoLoading, setIsVideoLoading] = useState(true); // State to manage video loading
-
-  const route = useRoute();
-  const selectedVideoId = route?.params?.videoId ?? '';
-  const selectedIndex = route?.params?.index ?? '';
-  
-
   useEffect(() => {
     if (selectedVideoId) {
       setVideoId(selectedVideoId);
@@ -90,12 +86,11 @@ const HomeSwipe = () => {
       try {
         const apiFirstName = await AsyncStorage.getItem('firstName');
         const apiUserId = await AsyncStorage.getItem('userId');
-        const apiJobOption = await AsyncStorage.getItem('jobOption');
+        // const apiJobOption = await AsyncStorage.getItem('jobOption');
         // const apiVideoId = await AsyncStorage.getItem('videoId');
         const parsedUserId = apiUserId ? parseInt(apiUserId, 10) : null;
         // setVideoId(apiVideoId);
         setFirstName(apiFirstName);
-        setJobOption(apiJobOption);
         setUserId(parsedUserId);
         fetchLikeStatus(parsedUserId);
         fetchProfilePic(parsedUserId);
@@ -123,64 +118,12 @@ const HomeSwipe = () => {
     };
   }, [navigation]);
   useEffect(() => {
-    const fetchVideos = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`${env.baseURL}/api/videos/videos`);
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch videos: ${response.statusText}`);
-        }
-
-        const responseText = await response.text();
-        let videoData = responseText ? JSON.parse(responseText) : [];
-
-        if (!Array.isArray(videoData) || videoData.length === 0) {
-          setHasVideo(false);
-          return;
-        }
-
-        const newVideos = videoData.map(video => ({
-          id: video.id,
-          userId: video.userId,
-          uri: video.videoUrl,
-          firstName: video.firstname,
-          profileImage: video.profilepic
-            ? `data:image/jpeg;base64,${video.profilepic}`
-            : null,
-          phoneNumber: video.phonenumber,
-          email: video.email,
-          thumbnail: video.thumbnail || null, // Ensure thumbnail is set or null
-        }));
-
-        // Filter out cached videos
-        const uncachedVideos = newVideos.filter(video => {
-          if (videoCacheRef.current.has(video.uri)) return false;
-          videoCacheRef.current.add(video.uri); // Add to cache
-          return true;
-        });
-
-        if (uncachedVideos.length > 0) {
-          setVideoUrl(prevVideos => [
-            ...prevVideos,
-            ...uncachedVideos.map((video, idx) => ({
-              ...video,
-              key: `video-${video.id}-${idx}`,
-            })),
-          ]);
-        }
-
-        setHasVideo(true);
-      } catch (error) {
-        console.error('Error fetching videos:', error);
-        setHasVideo(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchVideos();
-  }, []);
+  if (allvideos && allvideos.length > 0) {
+    setVideoUrl(allvideos);
+  } else {
+    console.warn('⚠️ No videos passed to HomeSwipe');
+  }
+}, [allvideos]);
 
   useEffect(() => {
     const fetchLikeCount = async () => {
@@ -242,7 +185,6 @@ const HomeSwipe = () => {
     }
   };
 
-  // Handle dislike action
   const handleDislike = async () => {
     const newLikedState = !isLiked[videoId];
     setIsLiked(prevState => ({
@@ -295,10 +237,7 @@ const HomeSwipe = () => {
       const thumbnailUrl = currentVideo?.thumbnail;
       if (!thumbnailUrl) {
         Alert.alert('Error', 'Thumbnail is not available for sharing.');
-        console.warn(
-          'Thumbnail is missing for the current video:',
-          currentVideo,
-        );
+        console.warn('Thumbnail is missing for the current video:', currentVideo);
         return;
       }
 
@@ -331,11 +270,11 @@ const HomeSwipe = () => {
           'Failed to download the thumbnail. Status code:',
           downloadResult.statusCode,
         );
-        console.error('Error', 'Unable to download the thumbnail for sharing.');
+        Alert.alert('Error', 'Unable to download the thumbnail for sharing.');
       }
     } catch (error) {
       console.error('Error sharing video:', error);
-      console.error(
+      Alert.alert(
         'Error',
         'An error occurred while preparing the share option.',
       );
@@ -366,19 +305,7 @@ const HomeSwipe = () => {
           console.error('Error fetching like count:', error);
         }
       };
-    const fetchScore = async videoId => {
-      try {
-        const response = await axios.get(
-          `https://app.wezume.in/api/totalscore/${videoId}`,
-        );
-        setScore(response.data.totalScore);
-      } catch (error) {
-        console.error('Error fetching score:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-fetchScore(videoId); // Fetch score for the focused video
+
       fetchLikeCount(); // Fetch like count for the focused video
 
       // Pause all videos except the focused one
@@ -390,59 +317,79 @@ fetchScore(videoId); // Fetch score for the focused video
         });
       }
 
-      const activeSubtitle = subtitles.find(
-        subtitle =>
-          currentTime >= subtitle.startTime && currentTime <= subtitle.endTime,
+     // subtitle start
+    
+     const activeSubtitle = subtitles.find(
+      subtitle =>
+        currentTime >= subtitle.startTime && currentTime <= subtitle.endTime,
+    );
+    setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : '');
+    
+    const parseTimeToSeconds = timeStr => {
+      const [hours, minutes, seconds] = timeStr.split(':');
+      const [sec, milli] = seconds.split(',');
+      return (
+        parseInt(hours, 10) * 3600 +
+        parseInt(minutes, 10) * 60 +
+        parseInt(sec, 10) +
+        parseInt(milli, 10) / 1000
       );
-      setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : '');
-
-      const parseTimeToSeconds = timeStr => {
-        const [hours, minutes, seconds] = timeStr.split(':');
-        const [sec, milli] = seconds.split(',');
-        return (
-          parseInt(hours, 10) * 3600 +
-          parseInt(minutes, 10) * 60 +
-          parseInt(sec, 10) +
-          parseInt(milli, 10) / 1000
-        );
-      };
-
-      const parseSRT = srtText => {
-        const lines = srtText.split('\n');
-        const parsedSubtitles = [];
-        let i = 0;
-
-        while (i < lines.length) {
-          if (lines[i].match(/^\d+$/)) {
-            const startEnd = lines[i + 1].split(' --> ');
-            const startTime = parseTimeToSeconds(startEnd[0]);
-            const endTime = parseTimeToSeconds(startEnd[1]);
-            let text = '';
-            i += 2;
-            while (i < lines.length && lines[i].trim() !== '') {
-              text += lines[i] + '\n';
-              i++;
-            }
-            parsedSubtitles.push({startTime, endTime, text: text.trim()});
-          } else {
+    };
+    
+    const parseSRT = srtText => {
+      const lines = srtText.split('\n');
+      const parsedSubtitles = [];
+      let i = 0;
+    
+      while (i < lines.length) {
+        if (lines[i].match(/^\d+$/)) {
+          const startEnd = lines[i + 1].split(' --> ');
+          const startTime = parseTimeToSeconds(startEnd[0]);
+          const endTime = parseTimeToSeconds(startEnd[1]);
+          let text = '';
+          i += 2;
+          while (i < lines.length && lines[i].trim() !== '') {
+            text += lines[i] + '\n';
             i++;
           }
+          parsedSubtitles.push({startTime, endTime, text: text.trim()});
+        } else {
+          i++;
         }
-        return parsedSubtitles;
-      };
+      }
+      return parsedSubtitles;
+    };
+    
+    const fetchSubtitles = async () => {
+      try {
+        const subtitlesUrl = `${env.baseURL}/api/videos/user/${videoId}/subtitles.srt`;
+        const response = await fetch(subtitlesUrl);
+        const text = await response.text();
+        const parsedSubtitles = parseSRT(text);
+        setSubtitles(parsedSubtitles);
+      } catch (error) {
+        console.error('Error fetching subtitles:', error);
+      }
+    };
+    const fetchScore = async videoId => {
+      try {
+        const response = await axios.get(
+          `https://app.wezume.in/api/totalscore/${videoId}`,
+        );
+        console.log(response.data);
+        setTotalScore(response.data.totalScore);
+      } catch (error) {
+        console.error('Error fetching score:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    // subtitle end 
 
-      const fetchSubtitles = async () => {
-        try {
-          const subtitlesUrl = `${env.baseURL}/api/videos/user/${videoId}/subtitles.srt`;
-          const response = await fetch(subtitlesUrl);
-          const text = await response.text();
-          const parsedSubtitles = parseSRT(text);
-          setSubtitles(parsedSubtitles);
-        } catch (error) {
-          console.error('Error fetching subtitles:', error);
-        }
-      };
+      
 
+fetchScore(videoId)
       fetchSubtitles();
     }
   }).current;
@@ -496,14 +443,6 @@ fetchScore(videoId); // Fetch score for the focused video
     }
   }, [selectedIndex, videourl]); // Trigger when selectedIndex or videourl changes
 
-  useEffect(() => {
-    if (!isFocused) {
-      setPaused(true);
-    } else {
-      setPaused(false);
-    }
-  }, [isFocused]);
-
   return (
     <View style={styles.container}>
       <View style={styles.modalContainer}>
@@ -524,6 +463,9 @@ fetchScore(videoId); // Fetch score for the focused video
             offset: windowHeight * index,
             index,
           })}
+          initialScrollIndex={
+            parseInt(selectedIndex, 10) >= 0 ? parseInt(selectedIndex, 10) : 0
+          } // Always scroll to the selected index
           initialNumToRender={1} // Load one video at a time
           maxToRenderPerBatch={1} // Render one video at a time
           windowSize={1} // Render only one video at a time
@@ -619,8 +561,6 @@ fetchScore(videoId); // Fetch score for the focused video
                     <Shares name={'share'} size={30} color={'#ffffff'} />
                   </TouchableOpacity>
                 </View>
-                {(jobOption === 'Employer' || jobOption === 'Investor') && (
-                  <>
                     <View style={styles.buttonmsg}>
                       <TouchableOpacity onPress={() => sendEmail(item)}>
                         <Whatsapp name={'email'} size={27} color={'#ffffff'} />
@@ -630,7 +570,7 @@ fetchScore(videoId); // Fetch score for the focused video
                       <TouchableOpacity
                         onPress={() => navigation.navigate('ScoringScreen', { videoId: item.id , userId: item.userId})}>
                         <Score name={'speedometer'} size={30} color={'#ffffff'} />
-                        <Text style={{color:'#ffffff',left:5,fontWeight:'900'}}>{score}</Text>
+                        <Text style={{color:'#ffffff',left:10,fontWeight:'900'}}>{totalScore}</Text>
                       </TouchableOpacity>
                     </View>
                     <View style={styles.buttonphone}>
@@ -642,8 +582,6 @@ fetchScore(videoId); // Fetch score for the focused video
                         />
                       </TouchableOpacity>
                     </View>
-                  </>
-                )}
                 <View style={styles.subtitle}>
                   <Text
                     style={{
@@ -653,7 +591,7 @@ fetchScore(videoId); // Fetch score for the focused video
                       fontWeight: 800,
                       bottom: -30,
                       left: 20,
-                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
                     }}>
                     {currentSubtitle}
                   </Text>

@@ -474,19 +474,19 @@ const Home1 = () => {
     }
   }, [isFocused]); // ✅ Clean and no unwanted re-runs
 
-useEffect(() => {
-  const sendHeartbeat = () => {
-    axios.post(`${env.baseURL}/api/heartbeat`, { userId })
-      .then(() => console.log('Heartbeat sent'))
-      .catch(err => console.error('Heartbeat failed', err));
-  };
+  useEffect(() => {
+    const sendHeartbeat = () => {
+      axios.post(`${env.baseURL}/api/heartbeat`, { userId })
+        .then(() => console.log('Heartbeat sent'))
+        .catch(err => console.error('Heartbeat failed', err));
+    };
 
-  sendHeartbeat(); // send one immediately on mount
+    sendHeartbeat(); // send one immediately on mount
 
-  const interval = setInterval(sendHeartbeat, 60 * 1000); // every 5 mins
+    const interval = setInterval(sendHeartbeat, 60 * 1000); // every 5 mins
 
-  return () => clearInterval(interval); // cleanup on unmount
-}, [userId]); // include userId as dependency
+    return () => clearInterval(interval); // cleanup on unmount
+  }, [userId]); // include userId as dependency
 
 
   return (
@@ -513,25 +513,20 @@ useEffect(() => {
             <ActivityIndicator size="large" color="#000" />
           ) : isVideoVisible && videoUri ? (
             // Show the video if it's visible and there's a video URL
-            <TouchableOpacity
-              onPress={() => setModalVisible(true)}
-              style={{
-                height: '80%',
-                width: '100%',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
-              <Video
-                ref={videoRef}
-                source={{ uri: videoUri }}
-                style={styles.videoPlayer}
-                resizeMode="contain"
-                automaticallyWaitsToMinimizeStalling={false}
-                controls={true}
-                onProgress={e => setCurrentTime(e.currentTime)} // Track current time
-              />
-              <Text style={styles.subtitle}>{currentSubtitle}</Text>
-            </TouchableOpacity>
+              <View style={styles.videoContainer}>
+                <Video
+                  ref={videoRef}
+                  source={{ uri: videoUri }}
+                  style={styles.videoPlayer}
+                  resizeMode="contain"
+                  automaticallyWaitsToMinimizeStalling={false}
+                  controls={true}
+                  onProgress={e => setCurrentTime(e.currentTime)}
+                />
+                {currentSubtitle !== '' && (
+                  <Text style={styles.subtitle}>{currentSubtitle}</Text>
+                )}
+              </View>
           ) : !hasVideo &&
             (isNaN(videoId) || videoId === undefined || videoId === null) ? (
             // Show a message if no video is available1
@@ -793,6 +788,41 @@ const styles = StyleSheet.create({
     padding: 28,
     bottom: 155,
     fontWeight: '900',
+  },
+  videoContainer: {
+    borderColor: '#ffffff',
+    borderWidth: 1,
+    borderRadius: 10,
+    overflow: 'hidden',
+    elevation: 10, // Android shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    backgroundColor: '#000',
+    width: '87%',
+    height: '80%',
+    position: 'relative',
+  },
+
+  videoPlayer: {
+    width: '100%',
+    height: '100%',
+  },
+
+  subtitle: {
+    position: 'absolute',
+    bottom:'13%',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    color: 'white',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    fontSize: 16,
+    zIndex: 999,
   },
 });
 

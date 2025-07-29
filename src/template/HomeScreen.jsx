@@ -28,7 +28,6 @@ const HomeScreen = () => {
   const [hasVideo, setHasVideo] = useState(null);
   const [userId, setUserId] = useState();
   const [firstName, setFirstName] = useState('');
-  // const [videoId, setVideoId] = useState(null);
   const [jobOption, setJobOption] = useState();
   const [visibleVideoIndex, setVisibleVideoIndex] = useState(null);
   const [loadingThumbnails, setLoadingThumbnails] = useState(true);
@@ -43,19 +42,19 @@ const HomeScreen = () => {
     }
   }, []);
 
- useEffect(() => {
-  const sendHeartbeat = () => {
-    axios.post(`${env.baseURL}/api/heartbeat`, { userId })
-      .then(() => console.log('Heartbeat sent'))
-      .catch(err => console.error('Heartbeat failed', err));
-  };
+  useEffect(() => {
+    const sendHeartbeat = () => {
+      axios.post(`${env.baseURL}/api/heartbeat`, { userId })
+        .then(() => console.log('Heartbeat sent'))
+        .catch(err => console.error('Heartbeat failed', err));
+    };
 
-  sendHeartbeat(); // send one immediately on mount
+    sendHeartbeat(); // send one immediately on mount
 
-  const interval = setInterval(sendHeartbeat, 60 * 1000); // every 5 mins
+    const interval = setInterval(sendHeartbeat, 60 * 1000); // every 5 mins
 
-  return () => clearInterval(interval); // cleanup on unmount
-}, [userId]); // include userId as dependency
+    return () => clearInterval(interval); // cleanup on unmount
+  }, [userId]); // include userId as dependency
 
   useEffect(() => {
     const loadDataFromStorage = async () => {
@@ -104,73 +103,55 @@ const HomeScreen = () => {
 
   useEffect(() => {
     const fetchVideos = async () => {
-      if (fetching) return; // Prevent multiple fetch calls
-      setFetching(true);
-      console.log('Fetching videos or loading from cache...');
+  if (fetching) return;
+  setFetching(true);
+  setLoading(true);
 
-      try {
-        setLoading(true);
+  try {
+    const cachedVideos = await AsyncStorage.getItem('cachedVideos');
+    if (cachedVideos) {
+      const parsed = JSON.parse(cachedVideos);
+      setVideoUrl(parsed);
+      setHasVideo(parsed.length > 0);
+      return;
+    }
 
-        // Check cache first
-        const cachedVideos = await AsyncStorage.getItem('cachedVideos');
-        if (cachedVideos) {
-          console.log('Loading videos from cache');
-          const parsedVideos = JSON.parse(cachedVideos);
-          setVideoUrl(parsedVideos);
-          setHasVideo(parsedVideos.length > 0);
-          return;
-        }
+    const response = await fetch(`${env.baseURL}/api/videos/videos`);
+    if (!response.ok) throw new Error('Failed to fetch');
 
-        // If no cache found, call API
-        console.log('No cache found, fetching from API...');
-        const response = await fetch(`${env.baseURL}/api/videos/videos`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch videos: ${response.statusText}`);
-        }
-        const videoData = await response.json();
+    const videoData = await response.json();
+    if (!Array.isArray(videoData) || videoData.length === 0) {
+      setHasVideo(false);
+      setVideoUrl([]);
+      return;
+    }
 
-        if (!Array.isArray(videoData) || videoData.length === 0) {
-          console.warn('No videos available');
-          setVideoUrl([]);
-          setHasVideo(false);
-          return;
-        }
+    const videosWithUri = videoData.map(video => ({
+      id: video.id,
+      userId: video.userId,
+      uri: video.videoUrl || video.uri,
+      firstName: video.firstname || video.firstName || '',
+      profileImage: video.profilepic
+        ? `data:image/jpeg;base64,${video.profilepic}`
+        : video.profileImage || null,
+      phoneNumber: video.phonenumber || video.phoneNumber || '',
+      email: video.email || '',
+      thumbnail: video.thumbnail || null,
+    }));
 
-        const videoURIs = [];
-        for (let index = 0; index < videoData.length; index++) {
-          const video = videoData[index];
-          console.log(`Processing video ${index + 1}/${videoData.length}`);
-          if (!video.videoUrl) {
-            console.warn(`Video at index ${index} has no URL`);
-            continue;
-          }
-          videoURIs.push({
-            Id: video.id,
-            uri: video.videoUrl,
-            thumbnail: video.thumbnail,
-          });
-          setVideoUrl([...videoURIs]); // Update state progressively
-          if (index === 0) {
-            setLoadingThumbnails(false);
-          }
-        }
-
-        setVideoUrl(videoURIs); // Final full update
-        setHasVideo(true);
-
-        // Save to cache
-        await AsyncStorage.setItem('cachedVideos', JSON.stringify(videoURIs));
-        console.log('Videos cached successfully');
-      } catch (error) {
-        console.error('Error fetching videos:', error);
-        setHasVideo(false);
-      } finally {
-        setLoading(false);
-        setLoadingThumbnails(false);
-        setFetching(false);
-      }
-    };
-
+    setVideoUrl(videosWithUri);
+    setHasVideo(true);
+    await AsyncStorage.setItem('cachedVideos', JSON.stringify(videosWithUri));
+    console.log('Videos fetched and cached');
+  } catch (err) {
+    console.error('Error fetching videos:', err);
+    setHasVideo(false);
+  } finally {
+    setLoading(false);
+    setLoadingThumbnails(false);
+    setFetching(false);
+  }
+};
     fetchVideos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]); // you don't need to add 'fetching' into dependencies
@@ -212,10 +193,11 @@ const HomeScreen = () => {
             renderItem={({ item, index }) => (
               <TouchableOpacity
                 onPress={() => {
-                  console.log('VideoId', item.Id, 'Index', index);
+                  console.log('VideoId', item.Id, 'Index', index, 'All Videos', videourl);
                   navigation.navigate('HomeSwipe', {
                     videoId: item.Id,
                     index: index,
+                    allvideos: videourl,
                   });
                 }}
                 style={[styles.videoItem]}>

@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   StyleSheet,
   Platform,
   Alert,
-  Linking,
+  TextInput,
+  Button,
 } from 'react-native';
-import {useNavigation, useRoute} from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   Camera,
   useCameraDevice,
@@ -22,14 +23,14 @@ import Video from 'react-native-video';
 import Media from 'react-native-vector-icons/Entypo';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AntDesign from 'react-native-vector-icons/AntDesign';
-import {request, PERMISSIONS, RESULTS} from 'react-native-permissions';
+import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import axios from 'axios';
 import env from './env';
 
 const CameraPage = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const {userId} = route.params || null;
+  const { userId, roleCode, college } = route.params || null;
   console.log('UserId passed:', userId); // Log UserId
 
   const [isRecording, setIsRecording] = useState(false);
@@ -41,53 +42,55 @@ const CameraPage = () => {
   const [isUploading, setUploading] = useState(false);
   const [isFrontCamera, setIsFrontCamera] = useState(false);
   const [videoUri, setVideoUri] = useState('');
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [videos, setVideos] = useState([]);
   const cameraRef = useRef(null);
-  const {hasPermission, requestPermission} = useCameraPermission();
+  const [showJobIdPrompt, setShowJobIdPrompt] = useState(true);
+  const [jobId, setJobId] = useState('');
+  const { hasPermission, requestPermission } = useCameraPermission();
   let timerInterval = useRef(null);
   const device = useCameraDevice(isFrontCamera ? 'front' : 'back');
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  const format = useCameraFormat(device, [{fps: 20}]);
-  const fps = format.minFps;
+  const format = useCameraFormat(device, [{ fps: 60 }]);
+  //const fps = format.minFps;
 
   // Trigger the alert when the component is mounted (camera screen entered)
   useEffect(() => {
     Alert.alert(
       'Note',
       'The video needs to be recorded for more than 30 seconds to upload.',
-      [{text: 'OK', onPress: () => console.log('OK Pressed')}],
-      {cancelable: false},
+      [{ text: 'OK', onPress: () => console.log('OK Pressed') }],
+      { cancelable: false },
     );
   }, []);
 
   useEffect(() => {
     const requestPermissions = async () => {
       try {
-        // Request permissions for storage, microphone, and phone
-        const storagePermission = await request(
-          PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE,
-        );
-        const microphonePermission = await request(
-          PERMISSIONS.ANDROID.RECORD_AUDIO,
-        );
-        const phonePermission = await request(
-          PERMISSIONS.ANDROID.READ_PHONE_STATE,
-        );
+        let cameraStatus, microphoneStatus, storageStatus;
 
-        console.log('Storage permission:', storagePermission);
-        console.log('Microphone permission:', microphonePermission);
-        console.log('Phone permission:', phonePermission);
+        if (Platform.OS === 'ios') {
+          cameraStatus = await request(PERMISSIONS.IOS.CAMERA);
+          microphoneStatus = await request(PERMISSIONS.IOS.MICROPHONE);
+          storageStatus = await request(PERMISSIONS.IOS.PHOTO_LIBRARY);
+        } else if (Platform.OS === 'android') {
+          cameraStatus = await request(PERMISSIONS.ANDROID.CAMERA);
+          microphoneStatus = await request(PERMISSIONS.ANDROID.RECORD_AUDIO);
+          storageStatus = await request(PERMISSIONS.ANDROID.WRITE_EXTERNAL_STORAGE);
+        }
 
-        // Handle permission results
+        console.log('Camera permission:', cameraStatus);
+        console.log('Microphone permission:', microphoneStatus);
+        console.log('Storage permission:', storageStatus);
+
         if (
-          storagePermission === RESULTS.GRANTED &&
-          microphonePermission === RESULTS.GRANTED &&
-          phonePermission === RESULTS.GRANTED
+          cameraStatus === RESULTS.GRANTED &&
+          microphoneStatus === RESULTS.GRANTED &&
+          storageStatus === RESULTS.GRANTED
         ) {
           console.log('All permissions granted');
         } else {
-          console.log('Some permissions are denied');
+          console.warn('Some permissions are denied');
         }
       } catch (error) {
         console.error('Error requesting permissions:', error);
@@ -96,7 +99,7 @@ const CameraPage = () => {
 
     // Request permissions on component mount
     requestPermissions();
-  }, []); // Empty dependency array ensures this effect runs only once when the component mounts
+  }, []);// Replace with your component's UI 
 
   useEffect(() => {
     if (!hasPermission) {
@@ -110,7 +113,18 @@ const CameraPage = () => {
     console.log('No camera device found.');
     return (
       <ActivityIndicator
-        style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}
+        style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+      />
+    );
+  }
+  // Debug log for permission status
+  console.log('Camera permission:', hasPermission);
+
+  if (!device) {
+    console.log('No camera device found.');
+    return (
+      <ActivityIndicator
+        style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
       />
     );
   }
@@ -122,25 +136,39 @@ const CameraPage = () => {
   };
   const handleUploadVideo = async () => {
     const randomFileName = generateRandomFileName();
+
     if (!videoUri) {
       alert('No video found to upload.');
       return;
     }
 
     setUploading(true);
-    setUploadProgress(0); // Reset progress when starting upload
+    setUploadProgress(0);
 
-    let formattedUri =
-      Platform.OS === 'android' ? 'file://' + videoUri : videoUri;
+    // Ensure URI is properly formatted
+    let formattedUri = videoUri.startsWith('file://') ? videoUri : 'file://' + videoUri;
 
     try {
       const formData = new FormData();
+
       formData.append('file', {
         uri: formattedUri,
         type: 'video/mp4',
         name: randomFileName,
       });
-      formData.append('userId', userId);
+
+      // Convert values to string for safe transmission
+      formData.append('userId', String(userId));
+      formData.append('jobId', jobId ? String(jobId) : '');
+      formData.append('roleCode', roleCode ? String(roleCode) : '');
+      formData.append('college', college ? String(college) : '');
+
+      console.log('Uploading with:');
+      console.log('userId:', userId);
+      console.log('jobId:', jobId);
+      console.log('roleCode:', roleCode);
+      console.log('college:', college);
+      console.log('videoUri:', formattedUri);
 
       const response = await axios.post(
         `${env.baseURL}/api/videos/upload`,
@@ -150,17 +178,16 @@ const CameraPage = () => {
             'Content-Type': 'multipart/form-data',
           },
           onUploadProgress: progressEvent => {
-            const percent = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total,
-            );
-            setUploadProgress(percent); // Update the progress state
+            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percent);
           },
-        },
+        }
       );
 
-      console.log('Upload Response', response);
+      console.log('Upload Response:', response.data);
 
-      const {filePath, fileName, id} = response.data;
+      const { filePath, fileName, id } = response.data;
+
       if (filePath && id) {
         alert('Video uploaded successfully!');
         const videoUrl = `${env.baseURL}/${filePath.replace(/\\/g, '/')}`;
@@ -175,19 +202,24 @@ const CameraPage = () => {
           routes: [
             {
               name: 'Transcribe',
-              params: {userId, videos: [...videos, newvideos]},
+              params: { userId, videos: [...videos, newvideos] },
             },
           ],
         });
-        setCurrentTimer(60); // Reset the timer
-        setUploading(false);
+
+        setCurrentTimer(60);
       } else {
         alert('Unexpected response from server. Missing required fields.');
       }
+
+      setUploading(false);
     } catch (error) {
+      console.error('Upload Error:', error.response?.data || error.message || error);
       alert('Error uploading video. Please try again.');
+      setUploading(false);
     }
   };
+
 
   const startRecording = async () => {
     if (cameraRef.current && !isRecording) {
@@ -238,12 +270,6 @@ const CameraPage = () => {
       clearInterval(timerInterval.current);
     }
   };
-
-  const openTutorial = () => {
-    const url = 'https://wezume.com/wezume-demo-video.mp4';
-    Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
-  };
-
   return (
     <View
       style={{
@@ -256,12 +282,12 @@ const CameraPage = () => {
         ref={cameraRef}
         device={device}
         isActive={true}
-        style={{position: 'absolute', height: '100%', width: '100%'}}
+        style={{ position: 'absolute', height: '100%', width: '100%' }}
         video={true}
         audio={true} // Ensure audio is enabled
         torch={onFlash}
-        format={format}
-        fps={fps}
+      // format={format}
+      // fps={fps}
       />
 
       {/* Flash Toggle */}
@@ -294,7 +320,7 @@ const CameraPage = () => {
         />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.infoButton} onPress={openTutorial}>
+      <TouchableOpacity style={styles.infoButton}>
         <AntDesign name={'infocirlce'} size={30} style={styles.infoicon} />
       </TouchableOpacity>
 
@@ -324,7 +350,7 @@ const CameraPage = () => {
           <View style={styles.modalContainer}>
             <Text style={styles.modalHeader}>Play Recorded Video</Text>
             <Video
-              source={{uri: videoPath}}
+              source={{ uri: videoPath }}
               style={styles.videoPlayer}
               controls={true}
               resizeMode="contain"
@@ -357,27 +383,27 @@ const CameraPage = () => {
             </View>
           </View>
           {/* Loading Spinner */}
-          {/* Loading Spinner */}
-      {isUploading && (
-        <View style={styles.uploadingOverlay}>
-          <ActivityIndicator size="large" color="white" />
-          <Text style={styles.uploadingText}>
-            Uploading... {uploadProgress}%
-          </Text>
-          {/* Displaying the progress here */}
-        </View>
-      )}
+
+          {isUploading && (
+            <View style={styles.uploadingOverlay}>
+              <ActivityIndicator size="large" color="white" />
+              <Text style={styles.uploadingText}>
+                Uploading... {uploadProgress}%
+              </Text>
+              {/* Displaying the progress here */}
+            </View>
+          )}
+
         </Modal>
       )}
 
-      {/* Show Modal Button */}
       {/* Show Modal Button */}
       {videoPath && !isRecording && currentTimer <= 30 && (
         <TouchableOpacity
           style={styles.showModalButton}
           onPress={() => setShowModal(true)}>
           <Media name="eye" size={35} color={'white'} />
-          <Text style={{color: '#ffffff', marginLeft: -8}}>preview</Text>
+          <Text style={{ color: '#ffffff', marginLeft: -8 }}>preview</Text>
           {/* <View>{handleAlert}</View> */}
         </TouchableOpacity>
       )}
@@ -388,6 +414,77 @@ const CameraPage = () => {
           <ActivityIndicator size="large" color="white" />
           <Text style={styles.uploadingText}>Uploading...</Text>
         </View>
+      )}
+      {showJobIdPrompt && (
+        <Modal transparent={true} animationType="fade" visible={true}>
+          <View
+            style={{
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'rgba(0,0,0,0.6)',
+            }}>
+            <View
+              style={{
+                width: '85%',
+                backgroundColor: 'white',
+                padding: 20,
+                borderRadius: 10,
+              }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 ,alignSelf: 'center' }}>
+                Choose an ID
+              </Text>
+              <Text style={{ marginBottom: 15 }}>
+                If you want to apply for a specific position, enter the Job ID below.
+              </Text>
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#ccc',
+                  borderRadius: 5,
+                  marginBottom: 15,
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                }}>
+                <TextInput
+                  placeholder="Enter Job ID (optional)"
+                  value={jobId}
+                  onChangeText={text => setJobId(text)}
+                  style={{ fontSize: 16 }}
+                />
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowJobIdPrompt(false);
+                    setJobId('');
+                  }}
+                  style={{
+                    padding: 10,
+                    backgroundColor: '#999',
+                    borderRadius: 5,
+                    width: '45%',
+                    alignItems: 'center',
+                  }}>
+                  <Text style={{ color: 'white' }}>Skip</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setShowJobIdPrompt(false)}
+                  style={{
+                    padding: 10,
+                    backgroundColor: '#007AFF',
+                    borderRadius: 5,
+                    width: '45%',
+                    alignItems: 'center',
+                  }}>
+                  <Text style={{ color: 'white' }}>Submit</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       )}
     </View>
   );

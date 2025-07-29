@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef, useCallback} from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,15 +11,14 @@ import {
   Text,
   ActivityIndicator,
 } from 'react-native';
-import axios from 'axios';
-import {Buffer} from 'buffer';
+import axios, { all } from 'axios';
+import { Buffer } from 'buffer';
 import Video from 'react-native-video';
 import Header from './header';
-import {useNavigation} from '@react-navigation/native';
-import {PermissionsAndroid, Platform} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { PermissionsAndroid, Platform } from 'react-native';
 import env from './env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { log } from 'console';
 
 const MyVideos = () => {
   const navigation = useNavigation();
@@ -37,7 +36,7 @@ const MyVideos = () => {
     itemVisiblePercentThreshold: 50,
   });
 
-  const onViewableItemsChanged = useCallback(({viewableItems}) => {
+  const onViewableItemsChanged = useCallback(({ viewableItems }) => {
     if (viewableItems.length > 0) {
       setVisibleVideoIndex(viewableItems[0].index);
     }
@@ -71,7 +70,7 @@ const MyVideos = () => {
           onPress: () => null,
           style: 'cancel',
         },
-        {text: 'Yes', onPress: () => navigation.goBack()},
+        { text: 'Yes', onPress: () => navigation.goBack() },
       ]);
       return true;
     };
@@ -79,89 +78,65 @@ const MyVideos = () => {
     return () => {
       BackHandler.removeEventListener('hardwareBackPress', backAction);
     };
-  }, [navigation]);
+  }, []);
 
   useEffect(() => {
-  const fetchLikedVideos = async () => {
-    if (fetching) return; // Prevent multiple fetch calls
-    setFetching(true);
-    console.log('Fetching liked videos or loading from cache...');
-
-    try {
+    const fetchLikedVideos = async () => {
+      if (fetching || !userId) return;
+      setFetching(true);
       setLoading(true);
 
-      const cacheKey = `likedVideos_${userId}`;
+      const likedCacheKey = `cachedLikedVideos_${userId}`;
 
-      // Check cache first
-      const cachedVideos = await AsyncStorage.getItem(cacheKey);
-      if (cachedVideos) {
-        console.log('Loading liked videos from cache');
-        const parsedVideos = JSON.parse(cachedVideos);
-        setVideoUrl(parsedVideos);
-        setHasVideo(parsedVideos.length > 0);
-        return;
-      }
+      try {
+        const cachedVideos = await AsyncStorage.getItem(likedCacheKey);
+        if (cachedVideos) {
+          const parsed = JSON.parse(cachedVideos);
+          setVideoUrl(parsed);
+          setHasVideo(parsed.length > 0);
+          console.log('✅ Loaded liked videos from cache');
+          return;
+        }
 
-      // If no cache found, call API
-      const fetchUrl = `${env.baseURL}/api/videos/liked?userId=${userId}`;
-      console.log(`No cache found, fetching liked videos from API: ${fetchUrl}`);
+        const response = await fetch(`${env.baseURL}/api/videos/liked?userId=${userId}`);
+        if (!response.ok) throw new Error('Failed to fetch liked videos');
 
-      const response = await fetch(fetchUrl);
+        const videoData = await response.json();
+        if (!Array.isArray(videoData) || videoData.length === 0) {
+          setHasVideo(false);
+          setVideoUrl([]);
+          return;
+        }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to fetch liked videos. Status: ${response.status} - ${errorText}`);
-      }
+        const videosWithUri = videoData.map(video => ({
+          id: video.id,
+          userId: video.userId,
+          uri: video.videoUrl || video.uri,
+          firstName: video.firstname || video.firstName || '',
+          profileImage: video.profilePic
+            ? `data:image/jpeg;base64,${video.profilePic}`
+            : video.profileImage || null,
+          phoneNumber: video.phonenumber || video.phoneNumber || '',
+          email: video.email || '',
+          thumbnail: video.thumbnail || null,
+        }));
 
-      const videoData = await response.json();
-
-      if (!Array.isArray(videoData) || videoData.length === 0) {
-        console.warn('No liked videos available');
-        setVideoUrl([]);
+        setVideoUrl(videosWithUri);
+        setHasVideo(true);
+        await AsyncStorage.setItem(likedCacheKey, JSON.stringify(videosWithUri));
+        console.log('✅ Fetched and cached liked videos');
+      } catch (err) {
+        console.error('❌ Error fetching liked videos:', err);
         setHasVideo(false);
-        return;
+      } finally {
+        setLoading(false);
+        setLoadingThumbnails(false);
+        setFetching(false);
       }
+    };
 
-      const videoURIs = [];
-      for (let index = 0; index < videoData.length; index++) {
-        const video = videoData[index];
-        console.log(`Processing liked video ${index + 1}/${videoData.length}`);
-        if (!video.videoUrl) {
-          console.warn(`Liked video at index ${index} has no URL`);
-          continue;
-        }
-        videoURIs.push({
-          Id: video.id,
-          uri: video.videoUrl,
-          thumbnail: video.thumbnail,
-        });
-
-        // Progressive update
-        setVideoUrl([...videoURIs]);
-        if (index === 0) {
-          setLoadingThumbnails(false);
-        }
-      }
-
-      setVideoUrl(videoURIs); // Final update
-      setHasVideo(true);
-
-      // Save to cache
-      await AsyncStorage.setItem(cacheKey, JSON.stringify(videoURIs));
-      console.log('Liked videos cached successfully');
-    } catch (error) {
-      console.error('Error fetching liked videos:', error.message || error);
-      setHasVideo(false);
-    } finally {
-      setLoading(false);
-      setLoadingThumbnails(false);
-      setFetching(false);
-    }
-  };
-
-  fetchLikedVideos();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [userId]);
+    fetchLikedVideos();
+  }, [userId]);
 
 
 
@@ -199,24 +174,25 @@ const MyVideos = () => {
         ) : (
           <FlatList
             data={videourl} // Exclude video with Id 32
-            renderItem={({item, index}) => (
+            renderItem={({ item, index }) => (
               <TouchableOpacity
                 onPress={() => {
-                  console.log('VideoId', item.Id, 'Index', index);
+                  console.log('VideoId', item.id, 'Index', index, 'all Videos', videourl);
                   navigation.navigate('LikeSwipe', {
-                    videoId: item.Id,
+                    videoId: item.id,
                     index: index,
+                    allVideos: videourl,
                   });
                 }}
                 style={[styles.videoItem]}>
                 {item.thumbnail ? (
                   <ImageBackground
-                    source={{uri: item.thumbnail}}
+                    source={{ uri: item.thumbnail }}
                     style={styles.videoPlayer}
                     resizeMode="contain">
                     {visibleVideoIndex === index && (
                       <Video
-                        source={{uri: item.thumbnail}}
+                        source={{ uri: item.thumbnail }}
                         paused={false}
                         style={styles.videoPlayer}
                         resizeMode="contain"

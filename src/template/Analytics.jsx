@@ -188,7 +188,7 @@ const Analytic = () => {
                 <View style={{height: '37%',paddingBottom: 20,}}>
 
                     {/* User Activity Log */}
-                    <View style={{ marginBottom: 30 }}>
+                    <View style={{ marginBottom: 30 ,height:'90%'}}>
                         <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 10, color: '#333' }}>
                             User Activity Log
                         </Text>
@@ -208,6 +208,7 @@ const Analytic = () => {
                             <Text style={{ flex: 2, fontWeight: '600', color: '#333' }}>Name</Text>
                             <Text style={{ flex: 2, fontWeight: '600', color: '#333' }}>Job Option</Text>
                             <Text style={{ flex: 2, fontWeight: '600', color: '#333' }}>Active Time</Text>
+                            <Text style={{ flex: 2, fontWeight: '600', color: '#333' }}>Lastactive Time</Text>
                         </View>
 
                         {/* Scrollable Rows */}
@@ -228,13 +229,14 @@ const Analytic = () => {
                                     <Text style={{ flex: 2, color: '#000' }}>{item.name}</Text>
                                     <Text style={{ flex: 2, color: '#000' }}>{item.jobOption}</Text>
                                     <Text style={{ flex: 2, color: '#000' }}>{item.formattedTime}</Text>
+                                    <Text style={{ flex: 2, color: '#000' }}>{item.lastActiveTime}</Text>
                                 </View>
                             ))}
                         </ScrollView>
                     </View>
 
                     {/* Recruiter Log */}
-                    <View>
+                    <View style={{height: '100%'}}>
                         <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 10, color: '#333' }}>
                             Recruiter Log
                         </Text>

@@ -258,7 +258,7 @@ const Scoring = () => {
             <Score name={'speedometer'} size={40} color={'#0788c4'} />
             <View style={{ flexDirection: 'row', marginTop: '4%' }}>
               <Image
-                source={require('D:/work/WEB_IN_TEK/src/template/assets/circle.png')}
+                source={require('/Users/aymen/Desktop/Wezume/Android/normal/src/template/assets/circle.png')}
                 style={{ width: 37, height: 37, marginRight: '2%', marginTop: '-1%' }}
               />
               <Text style={{ color: '#71797E', fontSize: 24, fontWeight: '600' }}>

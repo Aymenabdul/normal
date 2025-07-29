@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -13,13 +13,15 @@ import {
   ActivityIndicator, // Import ActivityIndicator
 } from 'react-native';
 import axios from 'axios';
-import {Buffer} from 'buffer';
+import { Buffer } from 'buffer';
 import Video from 'react-native-video';
-import {useRoute} from '@react-navigation/native';
-import {useNavigation} from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import Ant from 'react-native-vector-icons/AntDesign';
 import Shares from 'react-native-vector-icons/Entypo';
 import Like from 'react-native-vector-icons/Foundation';
+import Score from 'react-native-vector-icons/MaterialCommunityIcons';
 import Share from 'react-native-share'; // Import the share module
 import RNFS from 'react-native-fs';
 import Phone from 'react-native-vector-icons/FontAwesome6';
@@ -41,19 +43,19 @@ const FilterSwipe = () => {
   const [jobOption, setJobOption] = useState('');
   const [currentTime, setCurrentTime] = useState(0);
   const [subtitles, setSubtitles] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [totalScore,setTotalScore] = useState(0);
   const [currentVideo, setCurrentVideo] = useState(null);
   const [selectedVideoUri, setSelectedVideoUri] = useState('');
+  const isFocused = useIsFocused();
   const [Index, setSelectedIndex] = useState(null);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
-  const [page, setPage] = useState(0);
-  const pageSize = 1;
   const [isVideoLoading, setIsVideoLoading] = useState(true); // State to manage video loading
 
   const route = useRoute();
   const selectedVideoId = route?.params?.videoId ?? '';
   const selectedIndex = route?.params?.index ?? '';
-
+  const filteredVideos = route?.params?.filteredVideos ?? [];
+  const isFiltered = route?.params?.isFiltered ?? false;
   useEffect(() => {
     if (selectedVideoId) {
       setVideoId(selectedVideoId);
@@ -82,59 +84,6 @@ const FilterSwipe = () => {
   };
 
   const videoRefs = useRef([]); // Array to hold references to video players
-  // useEffect(() => {
-  //   const activeSubtitle = subtitles.find(
-  //     subtitle =>
-  //       currentTime >= subtitle.startTime && currentTime <= subtitle.endTime,
-  //   );
-  //   setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : '');
-  //   const parseTimeToSeconds = timeStr => {
-  //     const [hours, minutes, seconds] = timeStr.split(':');
-  //     const [sec, milli] = seconds.split(',');
-  //     return (
-  //       parseInt(hours, 10) * 3600 +
-  //       parseInt(minutes, 10) * 60 +
-  //       parseInt(sec, 10) +
-  //       parseInt(milli, 10) / 1000
-  //     );
-  //   };
-  //   const parseSRT = srtText => {
-  //     const lines = srtText.split('\n');
-  //     const parsedSubtitles = [];
-  //     let i = 0;
-
-  //     while (i < lines.length) {
-  //       if (lines[i].match(/^\d+$/)) {
-  //         const startEnd = lines[i + 1].split(' --> ');
-  //         const startTime = parseTimeToSeconds(startEnd[0]);
-  //         const endTime = parseTimeToSeconds(startEnd[1]);
-  //         let text = '';
-  //         i += 2;
-  //         while (i < lines.length && lines[i].trim() !== '') {
-  //           text += lines[i] + '\n';
-  //           i++;
-  //         }
-  //         parsedSubtitles.push({startTime, endTime, text: text.trim()});
-  //       } else {
-  //         i++;
-  //       }
-  //     }
-  //     return parsedSubtitles;
-  //   };
-
-  //   const fetchSubtitles = async () => {
-  //     try {
-  //       const subtitlesUrl = `${env.baseURL}/api/videos/user/${videoId}/subtitles.srt`;
-  //       const response = await fetch(subtitlesUrl);
-  //       const text = await response.text();
-  //       const parsedSubtitles = parseSRT(text);
-  //       setSubtitles(parsedSubtitles);
-  //     } catch (error) {
-  //       console.error('Error fetching subtitles:', error);
-  //     }
-  //   };
-  //   fetchSubtitles(videoId);
-  // }, [currentTime, subtitles, videoId]);
   useEffect(() => {
     const loadDataFromStorage = async () => {
       try {
@@ -164,7 +113,7 @@ const FilterSwipe = () => {
           onPress: () => null,
           style: 'cancel',
         },
-        {text: 'Yes', onPress: () => navigation.goBack()},
+        { text: 'Yes', onPress: () => navigation.goBack() },
       ]);
       return true;
     };
@@ -174,94 +123,58 @@ const FilterSwipe = () => {
     };
   }, [navigation]);
   useEffect(() => {
-    const fetchVideos = async (page = 0, size = 1) => {
+    const loadVideos = () => {
       try {
         setLoading(true);
-        const keySkills = ''; // Define keySkills variable
-        const experience = ''; // Define experience variable
-        const industry = ''; // Define industry variable
-        const city = ''; // Define city variable
-        const user = {
-          keySkills,
-          experience,
-          industry,
-          city,
-        };
-        const response = await axios.post(
-          `${env.baseURL}/api/videos/filter`,
-          user,
-        );
+        let videoData = [];
 
-        if (response.status === 204) {
-          setHasVideo(false);
-          return;
-        }
+        if (isFiltered && Array.isArray(filteredVideos) && filteredVideos.length > 0) {
+          videoData = [...filteredVideos];
 
-        const videoData = response.data;
-
-        if (!Array.isArray(videoData) || videoData.length === 0) {
-          setHasVideo(false);
-          return;
-        }
-
-        // Reorder videoData to set the passed indexed video to the first position
-        if (selectedIndex !== '') {
-          const selectedVideoIndex = parseInt(selectedIndex, 10);
-          if (
-            selectedVideoIndex >= 0 &&
-            selectedVideoIndex < videoData.length
-          ) {
-            const [selectedVideo] = videoData.splice(selectedVideoIndex, 1);
-            videoData.unshift(selectedVideo);
+          // Move selected video to top
+          if (selectedIndex !== '') {
+            const index = parseInt(selectedIndex, 10);
+            if (index >= 0 && index < videoData.length) {
+              const [selectedVideo] = videoData.splice(index, 1);
+              videoData.unshift(selectedVideo);
+            }
           }
-        }
 
-        const newVideos = videoData.map(video => {
-          const base64Image = video.profilePic
-            ? `data:image/jpeg;base64,${video.profilePic}`
-            : null;
-          // Set the videoId based on the fetched video
-          setVideoId(video.id);
-          return {
-            id: video.id,
-            userId: video.userId,
-            uri: video.videoUrl,
-            firstName: video.firstName,
-            profileImage: base64Image,
-            phoneNumber: video.phoneNumber,
-            email: video.email,
-            thumbnail: video.thumbnail || null,
-          };
-        });
-        setVideoUrl(prevVideos => {
-          const filteredVideos = newVideos.filter(
-            video => video.uri !== selectedVideoUri,
-          );
-          const uniqueVideos = [...prevVideos, ...filteredVideos].filter(
-            (video, index, self) =>
-              index === self.findIndex(v => v.uri === video.uri),
-          );
-          return uniqueVideos.map((video, idx) => ({
-            ...video,
-            key: `video-${video.id}-${idx}`,
-          }));
-        });
+          const newVideos = videoData.map(video => {
+            const base64Image = video.profilePic
+              ? `data:image/jpeg;base64,${video.profilePic}`
+              : video.profileImage || null;
 
-        setPage(prevPage => prevPage + 1);
-        setHasVideo(true);
-      } catch (error) {
-        if (error.response && error.response.status === 400) {
-          console.error('Error fetching videos:', error.response.data);
+            return {
+              id: video.id,
+              userId: video.userId,
+              uri: video.videoUrl || video.uri,
+              firstName: video.firstName,
+              profileImage: base64Image,
+              phoneNumber: video.phoneNumber,
+              email: video.email,
+              thumbnail: video.thumbnail || null,
+            };
+          });
+
+          setVideoUrl(newVideos);
+          setVideoId(newVideos[0]?.id || null);
+          setHasVideo(true);
         } else {
-          console.error('Error fetching videos:', error);
+          console.warn('⚠️ No filtered videos passed. Expected fallback here.');
+          setHasVideo(false);
         }
+      } catch (error) {
+        console.error('❌ Error loading videos from params:', error);
         setHasVideo(false);
       } finally {
         setLoading(false);
       }
     };
-    fetchVideos(page, pageSize);
-  }, [userId, videoId, page, selectedIndex, selectedVideoUri]); // Ensure dependencies are correct
+
+    loadVideos();
+  }, [filteredVideos, isFiltered, selectedIndex]);
+
 
   const handleLike = async () => {
     const newLikedState = !isLiked[videoId];
@@ -276,7 +189,7 @@ const FilterSwipe = () => {
           `${env.baseURL}/api/videos/${videoId}/like`,
           null,
           {
-            params: {userId, firstName},
+            params: { userId, firstName },
           },
         );
         if (response.status === 200) {
@@ -296,7 +209,7 @@ const FilterSwipe = () => {
     try {
       const notifications =
         JSON.parse(await AsyncStorage.getItem('likeNotifications')) || [];
-      notifications.push({videoId, firstName, timestamp: Date.now()});
+      notifications.push({ videoId, firstName, timestamp: Date.now() });
       await AsyncStorage.setItem(
         'likeNotifications',
         JSON.stringify(notifications),
@@ -317,7 +230,7 @@ const FilterSwipe = () => {
     try {
       if (!newLikedState) {
         await axios.post(`${env.baseURL}/api/videos/${videoId}/dislike`, null, {
-          params: {userId, firstName},
+          params: { userId, firstName },
         });
         setLikeCount(prevCount => prevCount - 1);
       }
@@ -388,9 +301,14 @@ const FilterSwipe = () => {
   };
   const shareOption = async () => {
     try {
-      // Define the thumbnail URL
-      const thumbnailUrl =
-        'https://wezume.in/uploads/videos/shareThumbnail.jpg';
+      // Use the thumbnail of the current video
+      const thumbnailUrl = currentVideo?.thumbnail;
+      if (!thumbnailUrl) {
+        Alert.alert('Error', 'Thumbnail is not available for sharing.');
+        console.warn('Thumbnail is missing for the current video:', currentVideo);
+        return;
+      }
+
       const localThumbnailPath = `${RNFS.CachesDirectoryPath}/thumbnail.jpg`;
 
       // Check if the URL is valid
@@ -431,7 +349,7 @@ const FilterSwipe = () => {
     }
   };
 
-  const onViewableItemsChanged = useRef(({viewableItems}) => {
+  const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems.length > 0) {
       const video = viewableItems[0].item;
       const videoId = video?.id;
@@ -500,7 +418,7 @@ const FilterSwipe = () => {
               text += lines[i] + '\n';
               i++;
             }
-            parsedSubtitles.push({startTime, endTime, text: text.trim()});
+            parsedSubtitles.push({ startTime, endTime, text: text.trim() });
           } else {
             i++;
           }
@@ -520,6 +438,22 @@ const FilterSwipe = () => {
         }
       };
 
+      const fetchScore = async videoId => {
+      try {
+        const response = await axios.get(
+          `https://app.wezume.in/api/totalscore/${videoId}`,
+        );
+        console.log(response.data);
+        setTotalScore(response.data.totalScore);
+      } catch (error) {
+        console.error('Error fetching score:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchScore(videoId); // Fetch score for the focused video
+
       fetchSubtitles();
     }
   }).current;
@@ -537,27 +471,21 @@ const FilterSwipe = () => {
           snapToInterval={windowHeight}
           scrollEnabled
           onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={{itemVisiblePercentThreshold: 80}} // Trigger when 80% visible
+          viewabilityConfig={{ itemVisiblePercentThreshold: 80 }} // Trigger when 80% visible
           getItemLayout={(data, index) => ({
             length: windowHeight,
             offset: windowHeight * index,
             index,
           })}
-          initialScrollIndex={
-            parseInt(selectedIndex, 10) >= 0 &&
-            parseInt(selectedIndex, 10) < videourl.length
-              ? parseInt(selectedIndex, 10)
-              : 0
-          } // Ensure index is within bounds
           initialNumToRender={1} // Load one video at a time
           maxToRenderPerBatch={1} // Render one video at a time
           windowSize={1} // Render only one video at a time
-          renderItem={({item, index}) => (
-            <View style={[styles.modalContent, {height: windowHeight}]}>
+          renderItem={({ item, index }) => (
+            <View style={[styles.modalContent, { height: windowHeight }]}>
               <View style={styles.userDetails}>
                 {item.profileImage && (
                   <Image
-                    source={{uri: item.profileImage}}
+                    source={{ uri: item.profileImage }}
                     style={styles.profileImage}
                   />
                 )}
@@ -575,18 +503,18 @@ const FilterSwipe = () => {
                 )}
                 <Video
                   ref={ref => (videoRefs.current[index] = ref)} // Store reference to video player
-                  source={{uri: item.uri}}
+                  source={{ uri: item.uri }}
                   style={styles.fullScreenVideo}
                   controls={true}
                   automaticallyWaitsToMinimizeStalling={false}
                   resizeMode="cover"
-                  paused={currentVideo?.id !== item.id}
+                  paused={!isFocused || currentVideo?.id !== item.id}
                   onLoadStart={() => setIsVideoLoading(true)} // Show loader when video starts loading
                   onLoad={() => setIsVideoLoading(false)} // Hide loader when video is loaded
                   onError={error =>
                     console.error('Video playback error:', error)
                   }
-                  onProgress={({currentTime}) => {
+                  onProgress={({ currentTime }) => {
                     setCurrentTime(currentTime);
                     const activeSubtitle = subtitles.find(
                       subtitle =>
@@ -605,7 +533,7 @@ const FilterSwipe = () => {
                 <TouchableOpacity
                   onPress={() => navigation.navigate('Trending')}
                   style={styles.trending1}>
-                  <Text style={{color: '#ffffff', fontWeight: '600'}}>
+                  <Text style={{ color: '#ffffff', fontWeight: '600' }}>
                     #Trending
                   </Text>
                 </TouchableOpacity>
@@ -613,7 +541,7 @@ const FilterSwipe = () => {
                 <TouchableOpacity
                   onPress={() => navigation.navigate('LikeScreen')}
                   style={styles.trending}>
-                  <Text style={{color: '#ffffff', fontWeight: '600'}}>
+                  <Text style={{ color: '#ffffff', fontWeight: '600' }}>
                     Liked Video
                   </Text>
                 </TouchableOpacity>
@@ -633,7 +561,7 @@ const FilterSwipe = () => {
                       name={'heart'}
                       size={30}
                       style={[
-                        {color: isLiked[videoId] ? 'red' : '#ffffff'}, // Dynamically change color
+                        { color: isLiked[videoId] ? 'red' : '#ffffff' }, // Dynamically change color
                       ]}
                     />
                     <Text style={styles.count}>{likeCount}</Text>
@@ -649,6 +577,31 @@ const FilterSwipe = () => {
                     <View style={styles.buttonmsg}>
                       <TouchableOpacity onPress={() => sendEmail(item)}>
                         <Whatsapp name={'email'} size={27} color={'#ffffff'} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.buttonphone}>
+                      <TouchableOpacity onPress={() => makeCall(item)}>
+                        <Phone
+                          name={'phone-volume'}
+                          size={22}
+                          color={'#ffffff'}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+                {(jobOption === 'Employer' || jobOption === 'Investor') && (
+                  <>
+                    <View style={styles.buttonmsg}>
+                      <TouchableOpacity onPress={() => sendEmail(item)}>
+                        <Whatsapp name={'email'} size={27} color={'#ffffff'} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.buttonscore}>
+                      <TouchableOpacity
+                        onPress={() => navigation.navigate('ScoringScreen', { videoId: item.id, userId: item.userId })}>
+                        <Score name={'speedometer'} size={30} color={'#ffffff'} />
+                        <Text style={{ color: '#ffffff', left: 5, fontWeight: '900' }}>{totalScore}</Text>
                       </TouchableOpacity>
                     </View>
                     <View style={styles.buttonphone}>

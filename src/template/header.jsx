@@ -15,11 +15,11 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import User from 'react-native-vector-icons/FontAwesome';
 import Menu from 'react-native-vector-icons/AntDesign';
+import Analytic from 'react-native-vector-icons/MaterialCommunityIcons';
 import Search from 'react-native-vector-icons/Ionicons';
 import Video from 'react-native-vector-icons/Foundation';
 import Faq from 'react-native-vector-icons/AntDesign';
 import Logout from 'react-native-vector-icons/AntDesign';
-import Analytic from 'react-native-vector-icons/MaterialCommunityIcons';
 import Noti from 'react-native-vector-icons/FontAwesome';
 import Privacy from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -31,9 +31,10 @@ const Header = ({ Value, profile, userName, userId }) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const slideAnimation = useRef(new Animated.Value(width)).current; // Initial position off-screen to the left
   const [notifications, setNotifications] = useState([]);
-  const [email, setEmail] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [jobOption, setJobOption] = useState();
+  const [roleCode, setRoleCode] = useState();
+  const [email,setEmail] = useState();
 
   const logouts = async () => {
     try {
@@ -78,11 +79,11 @@ const Header = ({ Value, profile, userName, userId }) => {
         // Retrieve values from AsyncStorage
         const apiJobOption = await AsyncStorage.getItem('jobOption');
         const apiEmail = await AsyncStorage.getItem('email');
-        console.log(apiEmail);
-        
+        const apiRoleCode = await AsyncStorage.getItem('roleCode');
         // Set state with retrieved data
-        setJobOption(apiJobOption);
         setEmail(apiEmail);
+        setRoleCode(apiRoleCode);
+        setJobOption(apiJobOption);
       } catch (error) {
         console.error('Error loading user data from AsyncStorage', error);
       }
@@ -220,15 +221,19 @@ const Header = ({ Value, profile, userName, userId }) => {
             <TouchableOpacity style={styles.closeButton} onPress={toggleMenu}>
               <Text style={styles.closeButtonText}>X</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => {
-              navigation.navigate('Account');
-              toggleMenu();
-            }}>
-              <Text style={styles.options}>
-                <User name={'user'} size={20} color={'grey'} />   Profile
-              </Text>
-            </TouchableOpacity>
-            <View style={styles.line}></View>
+            {roleCode === null && (
+              <>
+                <TouchableOpacity onPress={() => {
+                  navigation.navigate('Account');
+                  toggleMenu();
+                }}>
+                  <Text style={styles.options}>
+                    <User name={'user'} size={20} color={'grey'} />   Profile
+                  </Text>
+                </TouchableOpacity>
+                <View style={styles.line}></View>
+              </>
+            )}
             <TouchableOpacity
               onPress={() => {
                 navigation.navigate('profile');
@@ -249,12 +254,14 @@ const Header = ({ Value, profile, userName, userId }) => {
                 onPress={() => {
                   navigation.navigate('AnalyticScreen');
                   toggleMenu();
-                } }>
+                }}>
                 <Text style={styles.options}>
                   <Analytic name={'google-analytics'} size={22} color={'grey'} /> Analytics
                 </Text>
               </TouchableOpacity><View style={styles.line}></View></>
             )}
+            {roleCode == null && (
+              <>
             <TouchableOpacity
               onPress={() => {
                 navigation.navigate('Myvideos', { userName, userId });
@@ -265,9 +272,9 @@ const Header = ({ Value, profile, userName, userId }) => {
                 <Video name={'video'} size={22} color={'grey'} />   Videos
               </Text>
             </TouchableOpacity>
-            {/* </>
-            )} */}
             <View style={styles.line}></View>
+            </>
+            )}
             <TouchableOpacity onPress={() => {
               openTutorial();
               toggleMenu();
@@ -300,7 +307,7 @@ const Header = ({ Value, profile, userName, userId }) => {
               toggleMenu();
             }}>
               <Text style={styles.options}>
-                <Privacy name={'privacy-tip'} size={20} color={'grey'} />  Privacy Policy
+                <Privacy name={'privacy-tip'} size={20} color={'grey'} />   Privacy Policy
               </Text>
             </TouchableOpacity>
             <View style={styles.line}></View>

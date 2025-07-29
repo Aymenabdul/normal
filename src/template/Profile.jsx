@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   TextInput,
@@ -8,41 +8,40 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {useNavigation, useRoute} from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import UploadImage from 'react-native-vector-icons/MaterialCommunityIcons';
 import FastImage from 'react-native-fast-image';
 import Back from 'react-native-vector-icons/AntDesign';
 import axios from 'axios';
-import {Buffer} from 'buffer';
+import { Buffer } from 'buffer';
 import env from './env';
 
 const Profile = () => {
-  const [currentRole, setCurrentRole] = useState('');
   const [keySkills, setKeySkills] = useState('');
   const [experience, setExperience] = useState([]);
   const [industry, setIndustry] = useState([]);
-  const [firstName, setFirstNmae] = useState('');
+  const [transcriptionKeywords, setTranscriptionKeywords] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedJobId, setSelectedJobId] = useState('');
   const [city, setCity] = useState([]);
   const navigation = useNavigation();
-  const [profileImage, setProfileImage] = useState();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isIndustryDropdownOpen, setIsIndustryDropdownOpen] = useState(false);
-  const [isExperienceDropdownOpen, setIsExperienceDropdownOpen] =
-    useState(false);
+  const [isExperienceDropdownOpen, setIsExperienceDropdownOpen] = useState(false);
+  const [college, setCollege] = useState('');
   const [industrySearchText, setIndustrySearchText] = useState('');
   const [searchText, setSearchText] = useState('');
   const [FilteredVideos, setFilteredVideos] = useState([]);
   const route = useRoute();
 
   const experienceOptions = [
-    {label: '0-1 years', value: '0-1'},
-    {label: '1-3 years', value: '1-3'},
-    {label: '3-5 years', value: '3-5'},
-    {label: '5-10 years', value: '5-10'},
-    {label: '10-15 years', value: '10-15'},
-    {label: '15+ years', value: '10+'},
+    { label: '0-1 years', value: '0-1' },
+    { label: '1-3 years', value: '1-3' },
+    { label: '3-5 years', value: '3-5' },
+    { label: '5-10 years', value: '5-10' },
+    { label: '10-15 years', value: '10-15' },
+    { label: '15+ years', value: '10+' },
   ];
 
   const cityOptions = [
@@ -139,11 +138,15 @@ const Profile = () => {
 
   const handleFilter = async () => {
     const filterData = {
-      keySkills: keySkills ? keySkills : '',
+      keySkills: keySkills || '',
       experience: experience && experience.length > 0 ? experience[0] : '',
       industry: industry && industry.length > 0 ? industry[0] : '',
       city: city && city.length > 0 ? city[0] : '',
+      transcriptionKeywords: transcriptionKeywords || '',
+      jobId: selectedJobId || '', // ✅ Add this line
+      college, // ✅ Add college filter
     };
+
     setLoading(true);
     try {
       const response = await axios.post(
@@ -151,16 +154,18 @@ const Profile = () => {
         filterData,
       );
       const filteredVideo = response.data;
+
       if (Array.isArray(filteredVideo) && filteredVideo.length > 0) {
         const videosWithUri = filteredVideo.map(video => ({
           ...video,
-          uri: `${env.baseURL}/api/videos/user/${video.userId}`,
         }));
+
         setFilteredVideos(videosWithUri);
         navigation.navigate('Filtered', {
           filteredVideos: videosWithUri,
           isFiltered: true,
         });
+        console.log('Filtered videos:', videosWithUri);
       } else {
         alert('No videos found for the selected filter.');
         navigation.navigate('Filtered', {
@@ -170,16 +175,18 @@ const Profile = () => {
       }
     } catch (err) {
       alert('Error fetching filtered videos');
-      console.error(err.response);
+      console.error(err.response || err.message);
     } finally {
       setLoading(false);
     }
   };
 
+
+
   return (
     <><View style={styles.backarrow}>
       <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Back name={'leftcircle'} size={24} color={'#ffffff'} style={{elevation:10}} />
+        <Back name={'leftcircle'} size={24} color={'#ffffff'} style={{ elevation: 10 }} />
       </TouchableOpacity>
     </View><FastImage
       style={styles.backgroundImage}
@@ -189,13 +196,32 @@ const Profile = () => {
         <LinearGradient colors={['#d3e4f6', '#a1d1ff']} style={styles.container}>
           {/* <Image style={styles.img2} source={require('./assets/logo.png')} /> */}
           <Text style={styles.title}>Search</Text>
-
-          <TextInput
+          {/* <TextInput
             style={styles.input}
             placeholder="Key Skills"
             placeholderTextColor="#000"
             value={keySkills}
-            onChangeText={setKeySkills} />
+            onChangeText={setKeySkills} /> */}
+
+          <TextInput
+            style={styles.input}
+            placeholder="Filter by key words"
+            placeholderTextColor="#000"
+            value={transcriptionKeywords}
+            onChangeText={setTranscriptionKeywords} />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Job Id"
+            placeholderTextColor="#000"
+            value={selectedJobId}
+            onChangeText={setSelectedJobId} />
+          <TextInput
+            style={styles.input}
+            placeholder="serach by college or academy"
+            placeholderTextColor="#000"
+            value={college}
+            onChangeText={setCollege} />
 
           {/* Experience Checkboxes */}
           <TouchableOpacity

@@ -23,17 +23,19 @@ import Like from 'react-native-vector-icons/Foundation';
 import Share from 'react-native-share'; // Import the share module
 import Phone from 'react-native-vector-icons/FontAwesome6';
 import Whatsapp from 'react-native-vector-icons/Entypo';
-import Score from 'react-native-vector-icons/MaterialCommunityIcons';
 import RNFS from 'react-native-fs';
 import env from './env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const windowHeight = Dimensions.get('screen').height;
 const MySwipe = () => {
   const navigation = useNavigation();
+   const route = useRoute();
+  const selectedVideoId = route?.params?.videoId ?? '';
+  const selectedIndex = route?.params?.index ?? '';
+  const allvideos = route?.params?.allVideos ?? [];
   const [loading, setLoading] = useState(true);
   const [profileImage, setProfileImage] = useState(null);
-  const [videourl, setVideoUrl] = useState([]); // Array of video objects
-  const [hasVideo, setHasVideo] = useState(null);
+  const [videourl, setVideoUrl] = useState(allvideos || []);
   const [userId, setUserId] = useState();
   const [firstName, setFirstName] = useState('');
   const [likeCount, setLikeCount] = useState(0);
@@ -42,18 +44,11 @@ const MySwipe = () => {
   const [videoId, setVideoId] = useState(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [subtitles, setSubtitles] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState(null);
   const [currentVideo, setCurrentVideo] = useState(null);
   const [selectedVideoUri, setSelectedVideoUri] = useState('');
   const [Index, setSelectedIndex] = useState(null);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
-  const [page, setPage] = useState(0);
-  const pageSize = 1;
-  const videoCacheRef = useRef(new Set());
-  const [isVideoLoading, setIsVideoLoading] = useState(true); // State to manage video loading
-  const route = useRoute();
-  const selectedVideoId = route?.params?.videoId ?? '';
-  const selectedIndex = route?.params?.index ?? '';
+  const [isVideoLoading, setIsVideoLoading] = useState(true);
 
   useEffect(() => {
     if (selectedVideoId) {
@@ -120,65 +115,13 @@ const MySwipe = () => {
       BackHandler.removeEventListener('hardwareBackPress', backAction);
     };
   }, [navigation]);
-  useEffect(() => {
-    const fetchVideos = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`${env.baseURL}/api/videos/videos`);
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch videos: ${response.statusText}`);
-        }
-
-        const responseText = await response.text();
-        let videoData = responseText ? JSON.parse(responseText) : [];
-
-        if (!Array.isArray(videoData) || videoData.length === 0) {
-          setHasVideo(false);
-          return;
-        }
-
-        const newVideos = videoData.map(video => ({
-          id: video.id,
-          userId: video.userId,
-          uri: video.videoUrl,
-          firstName: video.firstname,
-          profileImage: video.profilepic
-            ? `data:image/jpeg;base64,${video.profilepic}`
-            : null,
-          phoneNumber: video.phonenumber,
-          email: video.email,
-          thumbnail: video.thumbnail || null, // Ensure thumbnail is set or null
-        }));
-
-        // Filter out cached videos
-        const uncachedVideos = newVideos.filter(video => {
-          if (videoCacheRef.current.has(video.uri)) return false;
-          videoCacheRef.current.add(video.uri); // Add to cache
-          return true;
-        });
-
-        if (uncachedVideos.length > 0) {
-          setVideoUrl(prevVideos => [
-            ...prevVideos,
-            ...uncachedVideos.map((video, idx) => ({
-              ...video,
-              key: `video-${video.id}-${idx}`,
-            })),
-          ]);
-        }
-
-        setHasVideo(true);
-      } catch (error) {
-        console.error('Error fetching videos:', error);
-        setHasVideo(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchVideos();
-  }, []);
+ useEffect(() => {
+   if (allvideos && allvideos.length > 0) {
+     setVideoUrl(allvideos);
+   } else {
+     console.warn('⚠️ No videos passed to HomeSwipe');
+   }
+ }, [allvideos]);
 
   useEffect(() => {
     const fetchLikeCount = async () => {
@@ -293,10 +236,7 @@ const MySwipe = () => {
       const thumbnailUrl = currentVideo?.thumbnail;
       if (!thumbnailUrl) {
         Alert.alert('Error', 'Thumbnail is not available for sharing.');
-        console.warn(
-          'Thumbnail is missing for the current video:',
-          currentVideo,
-        );
+        console.warn('Thumbnail is missing for the current video:', currentVideo);
         return;
       }
 
@@ -329,11 +269,11 @@ const MySwipe = () => {
           'Failed to download the thumbnail. Status code:',
           downloadResult.statusCode,
         );
-        console.error('Error', 'Unable to download the thumbnail for sharing.');
+        Alert.alert('Error', 'Unable to download the thumbnail for sharing.');
       }
     } catch (error) {
       console.error('Error sharing video:', error);
-      console.error(
+      Alert.alert(
         'Error',
         'An error occurred while preparing the share option.',
       );
@@ -376,58 +316,68 @@ const MySwipe = () => {
         });
       }
 
-      const activeSubtitle = subtitles.find(
-        subtitle =>
-          currentTime >= subtitle.startTime && currentTime <= subtitle.endTime,
-      );
-      setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : '');
 
-      const parseTimeToSeconds = timeStr => {
-        const [hours, minutes, seconds] = timeStr.split(':');
-        const [sec, milli] = seconds.split(',');
-        return (
-          parseInt(hours, 10) * 3600 +
-          parseInt(minutes, 10) * 60 +
-          parseInt(sec, 10) +
-          parseInt(milli, 10) / 1000
-        );
-      };
+ // subtitle start
 
-      const parseSRT = srtText => {
-        const lines = srtText.split('\n');
-        const parsedSubtitles = [];
-        let i = 0;
+ const activeSubtitle = subtitles.find(
+  subtitle =>
+    currentTime >= subtitle.startTime && currentTime <= subtitle.endTime,
+);
+setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : '');
 
-        while (i < lines.length) {
-          if (lines[i].match(/^\d+$/)) {
-            const startEnd = lines[i + 1].split(' --> ');
-            const startTime = parseTimeToSeconds(startEnd[0]);
-            const endTime = parseTimeToSeconds(startEnd[1]);
-            let text = '';
-            i += 2;
-            while (i < lines.length && lines[i].trim() !== '') {
-              text += lines[i] + '\n';
-              i++;
-            }
-            parsedSubtitles.push({startTime, endTime, text: text.trim()});
-          } else {
-            i++;
-          }
-        }
-        return parsedSubtitles;
-      };
+const parseTimeToSeconds = timeStr => {
+  const [hours, minutes, seconds] = timeStr.split(':');
+  const [sec, milli] = seconds.split(',');
+  return (
+    parseInt(hours, 10) * 3600 +
+    parseInt(minutes, 10) * 60 +
+    parseInt(sec, 10) +
+    parseInt(milli, 10) / 1000
+  );
+};
 
-      const fetchSubtitles = async () => {
-        try {
-          const subtitlesUrl = `${env.baseURL}/api/videos/user/${videoId}/subtitles.srt`;
-          const response = await fetch(subtitlesUrl);
-          const text = await response.text();
-          const parsedSubtitles = parseSRT(text);
-          setSubtitles(parsedSubtitles);
-        } catch (error) {
-          console.error('Error fetching subtitles:', error);
-        }
-      };
+const parseSRT = srtText => {
+  const lines = srtText.split('\n');
+  const parsedSubtitles = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    if (lines[i].match(/^\d+$/)) {
+      const startEnd = lines[i + 1].split(' --> ');
+      const startTime = parseTimeToSeconds(startEnd[0]);
+      const endTime = parseTimeToSeconds(startEnd[1]);
+      let text = '';
+      i += 2;
+      while (i < lines.length && lines[i].trim() !== '') {
+        text += lines[i] + '\n';
+        i++;
+      }
+      parsedSubtitles.push({startTime, endTime, text: text.trim()});
+    } else {
+      i++;
+    }
+  }
+  return parsedSubtitles;
+};
+
+const fetchSubtitles = async () => {
+  try {
+    const subtitlesUrl = `${env.baseURL}/api/videos/user/${videoId}/subtitles.srt`;
+    const response = await fetch(subtitlesUrl);
+    const text = await response.text();
+    const parsedSubtitles = parseSRT(text);
+    setSubtitles(parsedSubtitles);
+  } catch (error) {
+    console.error('Error fetching subtitles:', error);
+  }
+};
+
+// subtitle end
+      
+
+
+
+
 
       fetchSubtitles();
     }
@@ -495,11 +445,6 @@ const MySwipe = () => {
           decelerationRate="fast"
           snapToInterval={windowHeight}
           scrollEnabled
-          onEndReached={() => {
-            console.log('Reached end, loading more videos...');
-            setPage(prev => prev + 1); // 👈 this will trigger fetch via useEffect
-          }}
-          onEndReachedThreshold={0.5}
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={{itemVisiblePercentThreshold: 80}} // Trigger when 80% visible
           getItemLayout={(data, index) => ({
@@ -507,6 +452,9 @@ const MySwipe = () => {
             offset: windowHeight * index,
             index,
           })}
+          initialScrollIndex={
+            parseInt(selectedIndex, 10) >= 0 ? parseInt(selectedIndex, 10) : 0
+          } // Always scroll to the selected index
           initialNumToRender={1} // Load one video at a time
           maxToRenderPerBatch={1} // Render one video at a time
           windowSize={1} // Render only one video at a time
@@ -533,7 +481,7 @@ const MySwipe = () => {
                 )}
                 <Video
                   // ref={ref => (videoRefs.current[index] = ref)} // Store reference to video player
-                  source={{uri: item.uri}} // Use the video URL from the data
+                  source={{uri: item.uri}}
                   style={styles.fullScreenVideo}
                   controls={true}
                   automaticallyWaitsToMinimizeStalling={false}
@@ -609,11 +557,6 @@ const MySwipe = () => {
                         <Whatsapp name={'email'} size={27} color={'#ffffff'} />
                       </TouchableOpacity>
                     </View>
-                    <View style={styles.buttonscore}>
-                  <TouchableOpacity onPress={() => navigation.navigate('ScoringScreen')}>
-                    <Score name={'speedometer'} size={30} color={'red'} />
-                  </TouchableOpacity>
-                </View>
                     <View style={styles.buttonphone}>
                       <TouchableOpacity onPress={() => makeCall(item)}>
                         <Phone
@@ -634,7 +577,7 @@ const MySwipe = () => {
                       fontWeight: 800,
                       bottom: -30,
                       left: 20,
-                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
                     }}>
                     {currentSubtitle}
                   </Text>
